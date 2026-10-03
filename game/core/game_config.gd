@@ -13,26 +13,24 @@ enum DrawMode { ALWAYS_WINNER, DRAW_SUDDEN_DEATH }
 ## DRAW_SUDDEN_DEATH only: after this many rounds higher HP wins, equal HP -> sudden death.
 @export var max_rounds: int = 5
 ## Seconds per draft move before the first option is picked automatically.
-@export var move_time_seconds: float = 10.0
+@export var move_time_seconds: float = 15.0
+
+@export_group("Hand")
+## Cards drawn from the deck for each move (all of them if the deck is smaller).
+@export var hand_size: int = 3
 
 @export_group("Favor")
+## Favor carries over between rounds and is spent only by playing a highlighted card.
 @export var favor_max: int = 100
 @export var favor_per_hold: int = 20
 ## Winner gets this scaled by the fraction of army HP that survived.
 @export var favor_win_max: int = 30
 @export var favor_loss: int = 10
-## Chance that an offer is tier 1+ = favor * this (favor 100 -> 80%).
-@export var tier1_chance_per_favor: float = 0.008
-## Chance that a tier 1+ offer becomes tier 2 (evolution) = (favor - threshold) * this.
-@export var tier2_favor_threshold: int = 40
-@export var tier2_chance_per_favor: float = 0.015
-## Favor spent when picking an offer of tier 0 / 1 / 2.
-@export var tier_cost: Array[int] = [0, 15, 30]
-## Tier 1 "+X" offers give this many times the base amount.
-@export var tier1_amount_mult: int = 2
-@export var multiply_offer_chance: float = 0.3
-## "2x" offers add at most this many basic picks worth of units.
-@export var multiply_cap_picks: int = 3
+## Each card in hand is blessed with chance = favor / favor_max (needs favor >= bless_cost).
+@export var bless_cost: int = 50
+@export var bless_unit_mult: int = 2
+## At full favor a blessed card becomes an evolution with this chance (costs all favor).
+@export var evolution_chance: float = 0.5
 
 @export_group("Evolution")
 @export var evolution_bonus_pct: int = 25
@@ -40,7 +38,11 @@ enum DrawMode { ALWAYS_WINNER, DRAW_SUDDEN_DEATH }
 
 @export_group("Battle")
 @export var ticks_per_second: int = 20
-@export var battle_max_seconds: float = 20.0
+## After this, overtime: all damage grows every second so the battle always ends.
+@export var overtime_after_seconds: float = 20.0
+@export var overtime_damage_pct_per_second: int = 25
+## Safety cap; reached only if healing outpaces overtime. Decided by army HP.
+@export var battle_max_seconds: float = 90.0
 @export var arena_width: int = 720
 @export var arena_height: int = 880
 ## Distance of each row from the center line, px: melee, ranged, special.

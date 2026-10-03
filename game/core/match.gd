@@ -72,7 +72,7 @@ func submit(p: int, choice: int) -> bool:
 	elif choice >= 0 and choice < ps.offers.size():
 		var offer := ps.offers[choice]
 		offer.apply(ps.army)
-		ps.favor = maxi(0, ps.favor - cfg.tier_cost[offer.tier])
+		ps.favor = maxi(0, ps.favor - offer.favor_cost(cfg))
 		ps.picks_this_round.append(offer.label())
 	else:
 		return false

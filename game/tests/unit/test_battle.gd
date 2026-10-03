@@ -56,7 +56,7 @@ func test_armor_reduces_rapid_fire() -> void:
 
 func test_pierce_ignores_armor() -> void:
 	var sim := _sim({&"lancer": 1}, {&"pancerniak": 1}, 1, [&"war_camp", &"war_camp"])
-	assert_eq(sim._damage_after_armor(sim.units[0], sim.units[1]), 90)
+	assert_eq(sim._damage_after_armor(sim.units[0], sim.units[1]), GameDB.unit(&"lancer").damage)
 
 
 func test_citadel_armor_only_for_humans() -> void:
@@ -68,6 +68,21 @@ func test_citadel_armor_only_for_humans() -> void:
 			assert_eq(u.armor, 5, "ork armor under human base")
 
 
-func test_battle_ends_within_time_limit() -> void:
-	var r := _sim({&"medyk": 1}, {&"medyk": 1}).run()
-	assert_true(r.ticks <= int(GameDB.config.battle_max_seconds * GameDB.config.ticks_per_second), "timeout")
+func test_healers_only_end_immediately_by_hp() -> void:
+	var r := _sim({&"medyk": 2}, {&"medyk": 1}).run()
+	assert_eq(r.ticks, 1, "stalemate not detected")
+	assert_eq(r.outcome, BattleSim.Outcome.HP)
+	assert_eq(r.winner, 0)
+
+
+func test_battle_ends_by_elimination() -> void:
+	# Before overtime existed this matchup could time out; now someone must die.
+	var r := _sim({&"bastion": 3, &"medyk": 2}, {&"pancerniak": 4}).run()
+	assert_eq(r.outcome, BattleSim.Outcome.ELIMINATION)
+
+
+func test_overtime_raises_damage() -> void:
+	var sim := _sim({&"bastion": 1}, {&"pancerniak": 1})
+	assert_eq(sim.overtime_pct(), 100)
+	sim.tick = int((GameDB.config.overtime_after_seconds + 2.0) * GameDB.config.ticks_per_second)
+	assert_eq(sim.overtime_pct(), 100 + 2 * GameDB.config.overtime_damage_pct_per_second)

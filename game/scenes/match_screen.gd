@@ -151,6 +151,9 @@ func _after_result() -> void:
 func _process(delta: float) -> void:
 	match state:
 		State.DRAFT:
+			var pulse := 0.75 + 0.25 * sin(Time.get_ticks_msec() / 150.0)
+			for b in _cards:
+				b.self_modulate = Color(pulse + 0.25, pulse + 0.25, pulse, 1) if b.has_meta("blessed") else Color.WHITE
 			_timer -= delta
 			_timer_bar.value = _timer / cfg.move_time_seconds * 100.0
 			if _timer <= 0.0:
@@ -167,6 +170,8 @@ func _process(delta: float) -> void:
 				arena.after_step()
 				_tick_acc -= 1.0
 			arena.interp = clampf(_tick_acc, 0.0, 1.0)
+			if sim.overtime_pct() > 100:
+				_status.text = "DOGRYWKA! Obrażenia +%d%%" % (sim.overtime_pct() - 100)
 			if sim.finished:
 				arena.interp = 1.0
 				_end_battle()
@@ -198,6 +203,7 @@ func _refresh_hud() -> void:
 	_set_pips(_my_hp, view.me.hp)
 	_favor_bar.value = view.me.favor
 	_favor_label.text = "%s  %d/%d" % [GameDB.faction(game.players[0].base.faction).favor_name, view.me.favor, cfg.favor_max]
+	_favor_bar.modulate = Color(1.3, 1.2, 0.8) if view.me.favor >= cfg.bless_cost else Color.WHITE
 	if state == State.DRAFT:
 		_status.text = "Ruch %d/%d: wybierz kartę albo zagraj Gambit" % [cfg.moves_per_round - view.me.moves_left + 1, cfg.moves_per_round]
 
@@ -213,7 +219,7 @@ func _refresh_cards() -> void:
 			continue
 		var o: DraftOffer = offers[i]
 		var u := GameDB.unit(o.unit_id)
-		var tier_text: String = ["", "★ WZMOCNIONE\n", "★★ EWOLUCJA\n"][o.tier]
+		var tier_text: String = ["", "★ ŁASKA −%d\n" % cfg.bless_cost, "★★ EWOLUCJA −%d\n" % cfg.favor_max][o.tier]
 		b.text = "%s%s\n%s\nmasz: %d" % [tier_text, o.label(), ROLE_NAMES[u.role], army.count(o.unit_id)]
 		var style := StyleBoxFlat.new()
 		style.bg_color = GameDB.faction(u.faction).color.darkened(0.55)
@@ -222,6 +228,10 @@ func _refresh_cards() -> void:
 		style.set_corner_radius_all(10)
 		for s in ["normal", "hover", "pressed", "focus"]:
 			b.add_theme_stylebox_override(s, style)
+		if o.tier > 0:
+			b.set_meta("blessed", true)
+		else:
+			b.remove_meta("blessed")
 
 
 func _set_cards_visible(v: bool) -> void:

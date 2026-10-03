@@ -56,6 +56,7 @@ var _cfg: GameConfig
 var _bases: Array[BaseData] = []
 var _rng: RandomNumberGenerator
 var _max_ticks: int
+var _overtime_tick: int
 var _ability_used: Array[bool] = [false, false]
 var _ability_until: Array[int] = [0, 0]
 
@@ -65,6 +66,7 @@ func _init(armies: Array[Army], bases: Array[BaseData], cfg: GameConfig, rng: Ra
 	_bases = bases
 	_rng = rng
 	_max_ticks = int(cfg.battle_max_seconds * cfg.ticks_per_second)
+	_overtime_tick = int(cfg.overtime_after_seconds * cfg.ticks_per_second)
 	for owner in 2:
 		_spawn(owner, armies[owner])
 		result.hp_start[owner] = _hp_total(owner)
@@ -108,6 +110,13 @@ func alive_count(owner: int) -> int:
 		if u.alive and u.owner == owner:
 			n += 1
 	return n
+
+
+## 100 normally; grows every second after overtime starts.
+func overtime_pct() -> int:
+	if tick <= _overtime_tick:
+		return 100
+	return 100 + (tick - _overtime_tick) * _cfg.overtime_damage_pct_per_second / _cfg.ticks_per_second
 
 
 func ability_active(owner: int) -> bool:
@@ -256,6 +265,7 @@ func _move_towards(u: SimUnit, t: SimUnit) -> void:
 
 func _damage_after_armor(u: SimUnit, t: SimUnit) -> int:
 	var dmg := u.damage * (100 + u.rage * _bases[u.owner].rage_pct_per_stack) / 100
+	dmg = dmg * overtime_pct() / 100
 	if u.data.armor_pierce:
 		return dmg
 	return maxi(dmg - t.armor, maxi(1, dmg / 5))
@@ -359,7 +369,7 @@ func _on_death(dead: SimUnit) -> void:
 func _check_end() -> void:
 	var a0 := alive_count(0)
 	var a1 := alive_count(1)
-	if a0 > 0 and a1 > 0 and tick < _max_ticks:
+	if a0 > 0 and a1 > 0 and tick < _max_ticks and _anyone_can_attack():
 		return
 	finished = true
 	result.ticks = tick
@@ -378,6 +388,17 @@ func _check_end() -> void:
 	else:
 		result.outcome = Outcome.COIN
 		result.winner = _rng.randi_range(0, 1)
+
+
+## False when no living unit can damage any enemy (e.g. only healers left, or melee vs flyers only).
+func _anyone_can_attack() -> bool:
+	for u in units:
+		if not u.alive or u.data.is_healer():
+			continue
+		for e in units:
+			if e.alive and e.owner != u.owner and (u.data.can_hit_air() or not e.data.is_flying()):
+				return true
+	return false
 
 
 # --- helpers -----------------------------------------------------------------

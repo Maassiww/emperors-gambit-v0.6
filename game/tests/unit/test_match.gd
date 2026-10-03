@@ -92,3 +92,23 @@ func test_whole_match_deterministic() -> void:
 			m.play_battle()
 		logs.append(str(m.history))
 	assert_eq(logs[0], logs[1], "same seed, different match")
+
+
+func test_favor_persists_between_rounds() -> void:
+	var m := Match.new(decks, bases, 6)
+	for i in m.cfg.moves_per_round:
+		m.submit(0, Match.HOLD)
+		m.submit(1, 0)
+	var before := m.players[0].favor
+	m.play_battle()
+	assert_true(m.players[0].favor >= before, "favor reset after round")
+
+
+func test_blessed_card_spends_favor() -> void:
+	var m := Match.new(decks, bases, 7)
+	var ps := m.players[0]
+	ps.favor = 80
+	ps.offers = [DraftOffer.new(DraftOffer.Kind.ADD, &"strzelec", 4, 1)] as Array[DraftOffer]
+	m.submit(0, 0)
+	assert_eq(ps.favor, 80 - m.cfg.bless_cost)
+	assert_eq(ps.army.count(&"strzelec"), 4)
