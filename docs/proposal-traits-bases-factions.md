@@ -172,6 +172,34 @@ Ograniczenie: łącznie maks. około 12 słów w słowniku. Każde nowe słowo m
 
 ---
 
+## 6a. Ryzyko prawne: Games Workshop
+
+Nie jestem prawnikiem. Przed publikacją w Google Play warto skonsultować nazwy i grafiki z prawnikiem od IP.
+
+**Co chroni prawo, a co nie:**
+- Ogólne motywy (żołnierze w pancerzach, orkowie, kult zarazy, rój obcych, mechaniczni nieumarli, psionicy) **nie są chronione**. W sporze *Games Workshop v. Chapterhouse Studios* (USA, 2012–2014) sąd uznał, że wielu ogólnych elementów nie da się zastrzec.
+- Chronione są **konkretne nazwy i znaki towarowe** (np. *Space Marine*, *Adeptus Astartes*, *Eldar*, *Necron*, *Tyranid*, *Nurgle*, *Grimgor*), **ikonografia** (aquila, symbole zakonów, charakterystyczne naramienniki) i **konkretne projekty postaci**.
+- GW aktywnie egzekwuje swoje prawa. Głośna sprawa: zablokowanie e-booka *Spots the Space Marine* na Amazonie (2013) za samo słowo „Space Marine”.
+
+**Największe ryzyko to suma podobieństw**, a nie jeden element. Ludzie w pancerzach + „Imperium” + „Emperor” w tytule i nazwie łaski + orkowie z „k” to razem wyraźne skojarzenie z 40k.
+
+**Co zmienić przed publikacją:**
+
+| Element | Ryzyko | Propozycja |
+|---|---|---|
+| „Grimgor's Favor” | wysokie (postać GW) | imię własnego orkowego herszta |
+| „Imperium” jako nazwa frakcji ludzi | średnie w połączeniu z resztą | własna nazwa (np. Dominium, Hegemonia, Zakon Tarczy) |
+| „Emperor's Mercy”, „Emperor's Gambit” | średnie w połączeniu z „Imperium” | rozważyć zmianę tytułu albo przynajmniej łaski ludzi (np. „Łaska Tronu”) |
+| „Orks” w wersji angielskiej | średnie (pisownia 40k) | po angielsku „Orcs”; po polsku „orkowie” to zwykłe słowo |
+| „Eldarowie Pustki” | wysokie | całkowicie inna nazwa |
+| Pradawni (mechaniczni, wstają po śmierci) | średnie (bliskie Necronom) | inny wygląd i inny twist niż reanimacja |
+| Kult Zarazy | średnie, jeśli wygląd jak Nurgle (muchy, zielona zgnilizna, rozdęcia) | inna estetyka rozkładu (np. rdza, grzyb, krystalizacja) |
+| Grafiki AI | wysokie, jeśli prompt zawiera nazwy z 40k | nie wpisywać nazw GW w prompty, własny styl |
+
+**Zasada:** klimat grimdark tak, kopiowanie nie. Własne nazwy, własna ikonografia, własne sylwetki jednostek.
+
+---
+
 ## 7. Jak to zaimplementować
 
 ### 7.1 Architektura
