@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 env:
   GODOT_VERSION: 4.7.2-stable
@@ -63,25 +61,9 @@ jobs:
           mkdir -p build/web build/android
           godot --headless --path game --export-release Web ../build/web/index.html
           godot --headless --path game --export-debug Android ../build/android/emperors-gambit.apk
-          cp build/android/emperors-gambit.apk build/web/emperors-gambit.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: emperors-gambit-apk
           path: build/android/emperors-gambit.apk
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: build/web
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
