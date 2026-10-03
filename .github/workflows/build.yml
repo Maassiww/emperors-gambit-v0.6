@@ -1,0 +1,87 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  GODOT_VERSION: 4.7.2-stable
+  GODOT_SILENCE_ROOT_WARNING: 1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}
+
+      - name: Install Godot + export templates
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot && cd ~/godot
+          base=https://github.com/godotengine/godot/releases/download/$GODOT_VERSION
+          curl -sSLO $base/Godot_v${GODOT_VERSION}_linux.x86_64.zip && unzip -q Godot_v*_linux.x86_64.zip
+          curl -sSLO $base/Godot_v${GODOT_VERSION}_export_templates.tpz && unzip -q Godot_v*_export_templates.tpz
+          tpl=~/.local/share/godot/export_templates/${GODOT_VERSION/-/.}
+          mkdir -p $tpl && mv templates/* $tpl/ && rm -rf templates *.zip *.tpz
+
+      - name: Configure Android export
+        run: |
+          echo "$HOME/godot" >> $GITHUB_PATH
+          ln -sf ~/godot/Godot_v${GODOT_VERSION}_linux.x86_64 ~/godot/godot
+          keytool -genkeypair -keystore ~/debug.keystore -storepass android -alias androiddebugkey \
+            -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$HOME/debug.keystore" >> $GITHUB_ENV
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey" >> $GITHUB_ENV
+          echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android" >> $GITHUB_ENV
+          mkdir -p ~/.config/godot
+          printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\n' \
+            "$ANDROID_HOME" "$JAVA_HOME_17_X64" > ~/.config/godot/editor_settings-4.7.tres
+
+      - name: Test
+        run: |
+          godot --headless --path game --import || true
+          godot --headless --path game --script res://tests/smoke_test.gd | tee test.log
+          grep -q "SMOKE OK" test.log
+
+      - name: Export Web + Android
+        run: |
+          mkdir -p build/web build/android
+          godot --headless --path game --export-release Web ../build/web/index.html
+          godot --headless --path game --export-debug Android ../build/android/emperors-gambit.apk
+          cp build/android/emperors-gambit.apk build/web/emperors-gambit.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: emperors-gambit-apk
+          path: build/android/emperors-gambit.apk
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
