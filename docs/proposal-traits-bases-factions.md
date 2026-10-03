@@ -154,6 +154,8 @@ Moce celowo nie są pociskami. Zmieniają warunki walki, ekonomię albo tempo.
 
 ## 6. Inne frakcje (poglądowo, na później)
 
+**Decyzja (2026-10-03): na razie rozwijamy grę tylko z 2 frakcjami.** Kolejne frakcje wprowadzamy stopniowo później.
+
 Każda nowa frakcja musi wnieść **nową oś** i najwyżej **1–2 nowe słowa** do słownika.
 Liczebność na kartę wyznacza miejsce na skali „elita ↔ masa”.
 
@@ -187,8 +189,13 @@ Ograniczenie: łącznie maks. około 12 słów w słowniku. Każde nowe słowo m
 
 ### 7.2 UI
 
-- Ikonki statusów nad jednostkami (maks. 2 widoczne naraz).
-- Strefy rysowane jako półprzezroczyste plamy w kolorze frakcji.
+Wymagania od właściciela:
+- **Efekt na jednostce:** malutki napis z nazwą efektu nad jednostką + malutki biały pasek pokazujący pozostały czas działania.
+- **Wizualizacje efektów:** każdy efekt ma własny efekt wizualny, np. Prowokacja = biały pierścień wokół jednostki pokazujący zasięg.
+- **Łączenie efektów:** takie same efekty sąsiednich jednostek **łączą się** w jeden kształt (pierścienie Prowokacji kilku Bastionów zlewają się w jeden obrys), zamiast się nakładać. Technicznie: rysujemy obrys sumy okręgów (np. metaball / pole odległości w shaderze), a nie każdy okrąg osobno.
+
+Pozostałe:
+- Strefy rysowane jako półprzezroczyste plamy w kolorze frakcji (też łączone).
 - Przytrzymanie karty pokazuje opis jednostki i jej słowa-klucze.
 - Przycisk Dekretu obok Gambitu (aktywny raz na mecz).
 
