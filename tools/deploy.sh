@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build and publish test builds to the Caddy site (http://<server>:8090, password protected).
+# Build and publish test builds to the Caddy site (https://139-162-152-247.sslip.io, password protected).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 tools/build.sh
