@@ -4,10 +4,15 @@ extends Resource
 ## Designer units: px, px/s and seconds. BattleSim converts them to ticks.
 
 enum UnitClass { MELEE, RANGED, SPECIAL }
-enum Role { HEAVY, LIGHT, RAPID, SLOW, FLYER, SUPPORT }
+enum Role { HEAVY, LIGHT, RAPID, SLOW, FLYER, SUPPORT, SPECIAL }
+
+const NEUTRAL := &"neutral"
+const ROLE_NAMES := ["ciężkie melee", "lekkie melee", "szybki range", "ciężki range", "special · latający",
+	"special · wsparcie", "special"]
 
 @export var id: StringName
 @export var display_name: String
+## Faction id, or NEUTRAL for colorless units.
 @export var faction: StringName
 @export var unit_class: UnitClass
 @export var role: Role
@@ -26,14 +31,33 @@ enum Role { HEAVY, LIGHT, RAPID, SLOW, FLYER, SUPPORT }
 @export var size: int = 10
 ## Ignores the front and goes for ranged/special units first (specials only, for now).
 @export var targets_backline: bool = false
+## Cannot hit flyers even though it is not melee (e.g. a running bomb).
+@export var ground_only: bool = false
+@export var traits: Array[TraitData] = []
+## One-line rules text for cards.
+@export var blurb: String
+## Letter drawn on the placeholder sprite of specials and summons.
+@export var glyph: String
+## Bot/report estimate of what the traits are worth on top of raw stats.
+@export var power_bonus: float = 1.0
 ## Evolved form this unit turns into (empty = none).
 @export var evolves_to: StringName
 ## True for evolved forms: never drafted directly, only reached by evolution.
 @export var is_evolution: bool = false
+## True for units created during battle (turrets): never drafted.
+@export var is_summon: bool = false
 
 
 func is_flying() -> bool:
 	return role == Role.FLYER
+
+
+func is_special() -> bool:
+	return unit_class == UnitClass.SPECIAL
+
+
+func is_card() -> bool:
+	return not is_evolution and not is_summon
 
 
 ## Formation row, front to back: heavy melee, light melee, rapid ranged, slow ranged, special.
@@ -55,11 +79,23 @@ func is_healer() -> bool:
 
 
 func can_hit_air() -> bool:
-	return unit_class != UnitClass.MELEE or is_flying()
+	return (unit_class != UnitClass.MELEE or is_flying()) and not ground_only
+
+
+func get_trait(kind: TraitData.Kind) -> TraitData:
+	for t in traits:
+		if t.kind == kind:
+			return t
+	return null
+
+
+## Damage multiplier of an armor value (percent of damage that gets through).
+static func armor_pass_pct(armor_value: int, cfg: GameConfig) -> int:
+	return 100 - clampi(armor_value * cfg.armor_pct_per_point, 0, cfg.armor_max_reduction_pct)
 
 
 ## Rough per-unit strength, used by the bot and for balance reports.
 func power() -> float:
-	var effective_hp := hp * (1.0 + armor * 0.08)
+	var effective_hp := hp * 100.0 / armor_pass_pct(armor, GameDB.config)
 	var dps := damage / attack_interval
-	return sqrt(effective_hp * dps)
+	return sqrt(effective_hp * dps) * power_bonus

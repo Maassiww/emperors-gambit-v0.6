@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
 
@@ -17,6 +17,6 @@ attack_interval = 2.0
 attack_range = 360
 speed = 0
 armor_pierce = true
-splash_radius = 0
 size = 15
+blurb = "Snajper. Stoi w miejscu, przebija pancerz."
 is_evolution = true

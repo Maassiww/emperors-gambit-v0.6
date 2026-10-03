@@ -50,13 +50,20 @@ func test_armor_reduces_rapid_fire() -> void:
 	var sim := _sim({&"bastion": 1}, {&"siekacz": 1}, 1, [&"war_camp", &"war_camp"])
 	var siekacz := sim.units[1]
 	var bastion := sim.units[0]
-	# 5 dmg vs 8 armor -> minimum 1 per shot.
-	assert_eq(sim._damage_after_armor(siekacz, bastion), 1)
+	# Percent armor: 8 points x 6% = -48%, so 5 dmg -> 2.
+	assert_eq(sim._damage(siekacz, bastion, siekacz.damage), 2)
+
+
+func test_armor_reduction_is_capped() -> void:
+	var cfg := GameDB.config
+	assert_eq(UnitData.armor_pass_pct(0, cfg), 100)
+	assert_eq(UnitData.armor_pass_pct(5, cfg), 100 - 5 * cfg.armor_pct_per_point)
+	assert_eq(UnitData.armor_pass_pct(50, cfg), 100 - cfg.armor_max_reduction_pct)
 
 
 func test_pierce_ignores_armor() -> void:
 	var sim := _sim({&"lancer": 1}, {&"pancerniak": 1}, 1, [&"war_camp", &"war_camp"])
-	assert_eq(sim._damage_after_armor(sim.units[0], sim.units[1]), GameDB.unit(&"lancer").damage)
+	assert_eq(sim._damage(sim.units[0], sim.units[1], sim.units[0].damage), GameDB.unit(&"lancer").damage)
 
 
 func test_citadel_armor_only_for_humans() -> void:

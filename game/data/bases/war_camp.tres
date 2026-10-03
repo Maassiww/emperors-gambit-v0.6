@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1")
 id = &"war_camp"
+blurb = "Orkowie: szał za poległych orków. Bębny: szybszy start walki."
 display_name = "Obóz Wojenny"
 faction = &"orks"
 passive = 2

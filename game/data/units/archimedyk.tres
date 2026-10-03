@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
 
@@ -12,11 +12,11 @@ role = 5
 count_per_pick = 1
 hp = 288
 armor = 3
-damage = 48
+damage = 43
 attack_interval = 1.0
 attack_range = 160
 speed = 45
-armor_pierce = false
-splash_radius = 0
 size = 15
+blurb = "Leczy najbardziej rannego sojusznika."
+glyph = "+"
 is_evolution = true

@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Skok"
+delay = 1.0
+kind = 1
+
+[sub_resource type="Resource" id="trait_1"]
+script = ExtResource("2")
+label = "Egzekucja"
+power = 75
+threshold_pct = 35
+kind = 2
+
+[resource]
+script = ExtResource("1")
+id = &"mistrz_ostrzy"
+display_name = "Mistrz Ostrzy"
+faction = &"humans"
+unit_class = 2
+role = 6
+count_per_pick = 2
+hp = 375
+armor = 5
+damage = 60
+attack_interval = 0.7
+attack_range = 28
+speed = 95
+size = 14
+targets_backline = true
+traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
+blurb = "Po 2 s skacze za tyły wroga i poluje na ostatnią linię. Dobija rannych."
+glyph = "Z"
+power_bonus = 1.3
+is_evolution = true

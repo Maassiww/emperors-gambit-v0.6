@@ -14,6 +14,8 @@ enum DrawMode { ALWAYS_WINNER, DRAW_SUDDEN_DEATH }
 @export var max_rounds: int = 5
 ## Seconds per draft move before the first option is picked automatically.
 @export var move_time_seconds: float = 15.0
+## Deck building: at most this many special cards in a deck.
+@export var max_specials_in_deck: int = 2
 
 @export_group("Hand")
 ## Cards drawn from the deck for each move (all of them if the deck is smaller).
@@ -33,6 +35,15 @@ enum DrawMode { ALWAYS_WINNER, DRAW_SUDDEN_DEATH }
 
 @export_group("Battle")
 @export var ticks_per_second: int = 20
+## Each armor point blocks this % of damage, up to armor_max_reduction_pct.
+@export var armor_pct_per_point: int = 6
+@export var armor_max_reduction_pct: int = 60
+## Corrosion: -1 armor per stack.
+@export var corrosion_max_stacks: int = 3
+## After a stun ends the unit cannot be stunned again for this long (no stun chains).
+@export var stun_immunity_seconds: float = 2.0
+## Healing received by units with Taunt (stops taunt + heal walls).
+@export var taunt_heal_pct: int = 50
 ## After this, overtime: all damage grows every second so the battle always ends.
 @export var overtime_after_seconds: float = 20.0
 @export var overtime_damage_pct_per_second: int = 25

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"wiezyczka_ciezka"
+display_name = "Ciężka wieżyczka"
+faction = &"orks"
+unit_class = 1
+role = 2
+count_per_pick = 1
+hp = 150
+armor = 3
+damage = 9
+attack_interval = 0.35
+attack_range = 230
+speed = 0
+size = 10
+blurb = "Przywołana przez Mekaszefa."
+glyph = "W"
+is_summon = true

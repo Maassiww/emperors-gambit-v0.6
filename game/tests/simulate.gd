@@ -1,6 +1,7 @@
 extends SceneTree
 ## Bot vs bot balance report + one readable match log.
-## godot --headless --path game --script res://tests/simulate.gd -- [matches=500] [seed=1] [log]
+## godot --headless --path game --script res://tests/simulate.gd -- [matches=500] [seed=1] [log] [arch] [noreport]
+## arch: also a round robin of Bot.PRESETS (matches / 30 per pairing and seat).
 
 
 func _initialize() -> void:
@@ -10,23 +11,34 @@ func _initialize() -> void:
 	GameDB.ensure_loaded()
 	if "log" in args:
 		_print_match_log(seed_value)
-	_report(n, seed_value)
+	if not "noreport" in args:
+		_report(n, seed_value)
+	if "arch" in args:
+		_archetypes(maxi(1, n / 30), seed_value)
 	quit(0)
 
 
 func _random_setup(rng: RandomNumberGenerator) -> Dictionary:
-	var all := GameDB.card_ids_sorted()
 	var bases := GameDB.base_ids_sorted()
 	var decks := []
 	var base_ids: Array[StringName] = []
 	for p in 2:
-		var pool := all.duplicate()
-		var deck: Array[StringName] = []
-		for i in GameDB.config.deck_size:
-			deck.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
-		decks.append(deck)
+		decks.append(Bot.random_deck(rng))
 		base_ids.append(bases[rng.randi_range(0, bases.size() - 1)])
 	return {"decks": decks, "bases": base_ids}
+
+
+## "czysta", "czysta+N", "mix", "mix+N" (N = neutral card in deck).
+static func deck_kind(deck: Array) -> String:
+	var factions := {}
+	var neutral := false
+	for id in deck:
+		var f := GameDB.unit(id).faction
+		if f == UnitData.NEUTRAL:
+			neutral = true
+		else:
+			factions[f] = true
+	return ("czysta" if factions.size() <= 1 else "mix") + ("+N" if neutral else "")
 
 
 func _play(m: Match, bots: Array) -> void:
@@ -51,6 +63,8 @@ func _report(n: int, seed_value: int) -> void:
 	var timeouts := 0
 	var holds := 0
 	var evolutions := 0
+	var kind_games := {}
+	var kind_wins := {}
 	for i in n:
 		var setup := _random_setup(rng)
 		var m := Match.new(setup.decks, setup.bases, seed_value * 100000 + i)
@@ -76,6 +90,10 @@ func _report(n: int, seed_value: int) -> void:
 			base_wins[b] = base_wins.get(b, 0) + won
 		for p in 2:
 			var won := 1 if m.winner == p else 0
+			var k := deck_kind(setup.decks[p])
+			if k != deck_kind(setup.decks[1 - p]):
+				kind_games[k] = kind_games.get(k, 0) + 1
+				kind_wins[k] = kind_wins.get(k, 0) + won
 			for id in setup.decks[p]:
 				unit_games[id] = unit_games.get(id, 0) + 1
 				unit_wins[id] = unit_wins.get(id, 0) + won
@@ -87,11 +105,39 @@ func _report(n: int, seed_value: int) -> void:
 	for b in GameDB.base_ids_sorted():
 		if base_games.get(b, 0) > 0:
 			print("  %-20s %5.1f%% wygranych" % [GameDB.base(b).display_name, 100.0 * base_wins[b] / base_games[b]])
+	print("Typ decku (tylko mecze roznych typow):")
+	for k in ["czysta", "czysta+N", "mix", "mix+N"]:
+		if kind_games.get(k, 0) > 0:
+			print("  %-10s %5.1f%% (%d gier)" % [k, 100.0 * kind_wins[k] / kind_games[k], kind_games[k]])
 	print("Jednostki (winrate gdy w decku):")
 	for id in GameDB.card_ids_sorted():
 		if unit_games.get(id, 0) > 0:
 			var u := GameDB.unit(id)
-			print("  %-14s %-6s %5.1f%%" % [u.display_name, u.faction, 100.0 * unit_wins[id] / unit_games[id]])
+			print("  %-14s %-7s %5.1f%% (%d)" % [u.display_name, u.faction, 100.0 * unit_wins[id] / unit_games[id], unit_games[id]])
+
+
+## Round robin between Bot.PRESETS, both seats.
+func _archetypes(n: int, seed_value: int) -> void:
+	var presets := Bot.PRESETS
+	var wins := {}
+	var games := {}
+	var i := 0
+	for a in presets.size():
+		for b in presets.size():
+			if a == b:
+				continue
+			for k in n:
+				var bases: Array[StringName] = [presets[a].base, presets[b].base]
+				var m := Match.new([presets[a].deck, presets[b].deck], bases, seed_value * 100000 + i)
+				_play(m, [Bot.new(i * 2 + 1), Bot.new(i * 2 + 2)])
+				i += 1
+				for p in 2:
+					var name: String = presets[[a, b][p]].name
+					games[name] = games.get(name, 0) + 1
+					wins[name] = wins.get(name, 0) + (1 if m.winner == p else 0)
+	print("Archetypy (kazdy z kazdym, %d meczow na pare i strone):" % n)
+	for p in presets:
+		print("  %-18s %5.1f%%" % [p.name, 100.0 * wins[p.name] / games[p.name]])
 
 
 func _print_match_log(seed_value: int) -> void:

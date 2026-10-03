@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Wieżyczka"
+delay = 1.5
+period = 5.0
+max_count = 3
+summon = &"wiezyczka_ciezka"
+kind = 5
+
+[resource]
+script = ExtResource("1")
+id = &"mekaszef"
+display_name = "Mekaszef"
+faction = &"orks"
+unit_class = 2
+role = 6
+count_per_pick = 2
+hp = 165
+armor = 2
+damage = 14
+attack_interval = 0.8
+attack_range = 110
+speed = 55
+size = 12
+traits = Array[ExtResource("2")]([SubResource("trait_0")])
+blurb = "Idąc do przodu, co 7 s stawia wieżyczkę (maks. 2 na konstruktora)."
+glyph = "K"
+power_bonus = 2.0
+is_evolution = true

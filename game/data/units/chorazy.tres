@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Sztandar"
+radius = 160
+affects = 1
+buff_damage_pct = 20
+buff_armor = 2
+scales_with_purity = true
+kind = 4
+
+[resource]
+script = ExtResource("1")
+id = &"chorazy"
+display_name = "Chorąży"
+faction = &"humans"
+unit_class = 2
+role = 6
+count_per_pick = 1
+hp = 300
+armor = 4
+damage = 20
+attack_interval = 1.0
+attack_range = 130
+speed = 50
+size = 13
+traits = Array[ExtResource("2")]([SubResource("trait_0")])
+blurb = "Aura: ludzie +20% obrażeń i +2 pancerza. Słabnie przy obcych kartach."
+glyph = "C"
+power_bonus = 1.8
+evolves_to = &"chorazy_gwardii"

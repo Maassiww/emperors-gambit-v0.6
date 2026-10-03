@@ -1,9 +1,12 @@
 extends SceneTree
 ## Runs every test_* method in res://tests/unit/test_*.gd. Prints one summary line.
 ## godot --headless --path game --script res://tests/run_tests.gd
+## Script errors inside a test (which abort it silently) count as failures of that test.
 
 
 func _initialize() -> void:
+	var catcher := ErrorCatcher.new()
+	OS.add_logger(catcher)
 	var passed := 0
 	var failures: Array[String] = []
 	var files := Array(DirAccess.get_files_at("res://tests/unit/"))
@@ -12,13 +15,19 @@ func _initialize() -> void:
 		if not (f.begins_with("test_") and f.ends_with(".gd")):
 			continue
 		var script: GDScript = load("res://tests/unit/" + f)
+		if script == null or not script.can_instantiate():
+			failures.append("%s: script failed to load" % f)
+			continue
 		for m in script.get_script_method_list():
 			var name: String = m.name
 			if not name.begins_with("test_"):
 				continue
 			var tc: TestCase = script.new()
 			tc._current = "%s::%s" % [f, name]
+			catcher.errors.clear()
 			tc.call(name)
+			for e in catcher.errors:
+				tc.failures.append("%s: ERROR %s" % [tc._current, e])
 			if tc.failures.is_empty():
 				passed += 1
 			else:

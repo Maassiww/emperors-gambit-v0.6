@@ -11,7 +11,6 @@ const TOP_BAR_H := 96
 const BOTTOM_H := 300
 const REVEAL_TIME := 1.8
 const RESULT_TIME := 2.6
-const ROLE_NAMES := ["ciężkie melee", "lekkie melee", "szybki range", "ciężki range", "latający", "wsparcie"]
 const TIER_COLORS := [Color(0.45, 0.47, 0.52), Color(0.75, 0.8, 0.9), Color(1.0, 0.8, 0.3)]
 
 var decks := []
@@ -214,8 +213,14 @@ func _refresh_cards() -> void:
 			continue
 		var o: DraftOffer = offers[i]
 		var u := GameDB.unit(o.unit_id)
-		var tier_text: String = ["", "★ ŁASKA −%d\n" % cfg.bless_cost, "★★ EWOLUCJA −%d\n" % cfg.favor_max][o.tier]
-		b.text = "%s%s\n%s\nmasz: %d" % [tier_text, o.label(), ROLE_NAMES[u.role], army.count(o.unit_id)]
+		var tier_text: String = ["", "★ ŁASKA −%d" % cfg.bless_cost, "★★ EWOLUCJA −%d" % cfg.favor_max][o.tier]
+		var info: Array[Label] = []
+		info.assign(b.get_meta("labels"))
+		info[0].text = tier_text
+		info[0].visible = o.tier > 0
+		info[1].text = o.label()
+		info[2].text = "%s · masz: %d" % [UnitData.ROLE_NAMES[u.role], army.count(o.unit_id)]
+		info[3].text = GameDB.unit(o.produces).blurb
 		var style := StyleBoxFlat.new()
 		style.bg_color = GameDB.faction(u.faction).color.darkened(0.55)
 		style.border_color = TIER_COLORS[o.tier]
@@ -352,11 +357,11 @@ func _build_bottom_panel() -> void:
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(0, 126)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		b.add_theme_font_size_override("font_size", 19)
+		b.clip_contents = true
 		b.pressed.connect(_on_pick.bind(i))
 		cards.add_child(b)
 		_cards.append(b)
+		b.set_meta("labels", card_labels(b, [[13, Color(1.0, 0.85, 0.4)], [18, Color.WHITE], [12, Color(1, 1, 1, 0.6)], [12, Color(1, 1, 1, 0.85)]]))
 
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)
@@ -401,6 +406,30 @@ func _build_end_panel() -> void:
 	menu.custom_minimum_size.y = 64
 	menu.pressed.connect(func() -> void: exit_requested.emit())
 	box.add_child(menu)
+
+
+## Stacked labels inside a card button (the button itself has no text). specs: [[font_size, color], ...]
+static func card_labels(button: Button, specs: Array) -> Array[Label]:
+	var box := VBoxContainer.new()
+	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	box.offset_left = 8
+	box.offset_right = -8
+	box.offset_top = 6
+	box.offset_bottom = -6
+	box.add_theme_constant_override("separation", 1)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button.add_child(box)
+	var out: Array[Label] = []
+	for spec in specs:
+		var l := Label.new()
+		l.add_theme_font_size_override("font_size", spec[0])
+		l.add_theme_color_override("font_color", spec[1])
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(l)
+		out.append(l)
+	return out
 
 
 func _label(parent: Node, pos: Vector2, font_size: int) -> Label:

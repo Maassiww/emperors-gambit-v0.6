@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"wiezyczka"
+display_name = "Wieżyczka"
+faction = &"orks"
+unit_class = 1
+role = 2
+count_per_pick = 1
+hp = 100
+armor = 2
+damage = 6
+attack_interval = 0.35
+attack_range = 210
+speed = 0
+size = 9
+blurb = "Przywołana przez Konstruktora."
+glyph = "W"
+is_summon = true

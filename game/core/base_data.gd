@@ -7,6 +7,8 @@ enum Ability { NONE, RALLY_BANNER, WAR_DRUMS }
 
 @export var id: StringName
 @export var display_name: String
+## One-line description for the base picker.
+@export var blurb: String
 @export var faction: StringName
 @export var passive: Passive
 ## ARMOR_BONUS: +armor. RAGE_ON_ALLY_DEATH: max stacks (each +rage_pct_per_stack damage).

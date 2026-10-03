@@ -1,6 +1,13 @@
-[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Prowokacja"
+radius = 85
+kind = 0
 
 [resource]
 script = ExtResource("1")
@@ -10,13 +17,13 @@ faction = &"humans"
 unit_class = 0
 role = 0
 count_per_pick = 1
-hp = 832
+hp = 785
 armor = 10
 damage = 33
 attack_interval = 1.0
 attack_range = 30
 speed = 35
-armor_pierce = false
-splash_radius = 0
 size = 15
+traits = Array[ExtResource("2")]([SubResource("trait_0")])
+blurb = "Tank. Prowokacja: wrogowie obok muszą bić jego."
 is_evolution = true

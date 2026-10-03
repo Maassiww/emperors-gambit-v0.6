@@ -37,29 +37,73 @@ Jednostki ustawiają się automatycznie, od frontu: ciężkie melee → lekkie m
 
 Zwykłe jednostki atakują najbliższego wroga. Atak na tyły to domena speciali.
 
-## Cel speciali: czysta frakcja vs mix
+## Budowanie decku
 
-Gracz ma mieć realny wybór między decku jednej frakcji a mieszanym. Speciale są głównym narzędziem:
-nagradzają określone kompozycje i dają odpowiedzi na typowe strategie, więc żaden styl nie jest oczywisty.
+- Deck: 5 różnych kart z dowolnych frakcji, **maks. 2 speciale** (do rozważenia: maks. 1).
+- Baza wybierana osobno. Ostatni deck i baza zapisują się na urządzeniu.
+- Bot gra jednym z gotowych zestawów (`Bot.PRESETS`): czyste frakcje i mixy.
 
-### Pomysły do dyskusji (nic jeszcze nie jest ustalone)
+## Słownik efektów (wdrożone)
 
-Od właściciela:
-- **Zabójca** – teleportuje się na tyły przeciwnika i poluje na range/speciale.
-- **Ork Konstruktor** – idąc do przodu, co jakiś czas stawia wieżyczki.
+| Słowo | Działanie | Limit |
+|---|---|---|
+| Pancerz | każdy punkt −6% obrażeń | maks. −60% |
+| Prowokacja | wrogowie w promieniu muszą atakować tę jednostkę | najbliższy prowokujący wygrywa; leczenie na niej −50% |
+| Ogłuszenie | brak ruchu i ataku | po ogłuszeniu 2 s odporności |
+| Korozja | −1 pancerza na stos | maks. 3 stosy |
+| Oznaczenie | cel otrzymuje +X% obrażeń | jeden znacznik, liczy się najsilniejszy |
+| Egzekucja | +X% obrażeń do celów poniżej progu HP | — |
+| Aura | bonus dla sojuszników w promieniu | z kilku aur tego samego parametru liczy się najsilniejsza |
+| Przywołanie | nowa jednostka w trakcie walki | limit na przywołującego |
 
-Propozycje do rozważenia:
-- **Ludzie**
-  - *Inżynier Tarcz* – rozstawia generator osłony, który pochłania obrażenia jednostek w pobliżu (kontra na artylerię).
-  - *Psionik* – co kilka sekund ogłusza grupę wrogów (kontra na masę).
-  - *Chorąży Imperium* – aura dla jednostek ludzi; im czystszy deck, tym silniejsza (nagradza czystą frakcję).
-- **Orkowie**
-  - *Szaman* – „Waaagh”: wzmacnia wszystkie melee w zasięgu, mocniej przy dużej liczbie orków.
-  - *Bombowiec* – kamikaze wbiegający w gęste formacje (kontra na stacjonarną artylerię).
-  - *Wódz* – każdy poległy ork nakręca szał całej armii.
-- **Neutralne / mix**
-  - *Najemnik* – silniejszy za każdą inną frakcję obecną w armii (nagradza mix).
-  - *Zwiadowca* – na starcie walki odsłania i oznacza najsilniejszą jednostkę wroga (łączy się z mgłą wojny).
+Priorytet celu: **Prowokacja > cecha jednostki** (na tyły, w największą grupę) **> najbliższy wróg**.
+
+W UI:
+- zasięgi Prowokacji (biały) i aur (kolor frakcji) rysujemy jako jeden wspólny obrys sumy okręgów;
+- efekty czasowe mają nad jednostką nazwę i biały pasek pozostałego czasu;
+- podgląd draftu i odsłonięcie pokazują poziom Kontraktu i osłabione aury („Sztandar 50%”).
+
+## Czystość decku
+
+Liczymy **różne typy kart na planszy** (nie liczbę jednostek). Aury „pod czystość” (Chorąży, Szaman):
+- 0 obcych typów → 100%,
+- 1 obcy typ → 50%,
+- 2+ obce typy → 0%.
+
+Typ neutralny też jest obcy. Przeciwnik widzi skład po odsłonięciu, więc czystość jest jawną informacją.
+
+## Speciale
+
+| Special | Frakcja | Działanie | Kontruje | Kontrą jest |
+|---|---|---|---|---|
+| Medyk polowy | ludzie | leczy najbardziej rannego | wyniszczanie | nagłe zabicie, Zabójca |
+| Zabójca | ludzie | ×2; po 2 s skok za najdalszą jednostkę range/special wroga; Egzekucja +50% < 35% HP; trzyma się ofiary do jej śmierci | artyleria, Medyk | obszar, skupiony ostrzał z tyłów |
+| Psionik | ludzie | co 6 s ogłusza (1,5 s) największą grupę w zasięgu | masa | Lotniak, Zabójca |
+| Chorąży | ludzie | aura: ludzie +20% obrażeń, +2 pancerza (wg czystości) | wyrównana walka | obszar, mix |
+| Lotniak | orkowie | lata, poluje na tyły, po śmierci wybucha | artyleria | szybki range, Prowokacja |
+| Konstruktor | orkowie | co 7 s stawia wieżyczkę (maks. 2 na konstruktora) | defensywne armie | artyleria, obszar |
+| Bombowiec | orkowie | ×3; wbiega w największą grupę i wybucha, ignoruje pancerz (Korozja ×2) | zbite formacje | Prowokacja (wybucha na tanku), ostrzał |
+| Szaman | orkowie | aura: orkowie +25% szybkości ataku i ruchu (wg czystości) | wyrównana walka | Psionik |
+| Najemnik | neutralny | Kontrakt, patrz niżej | — | — |
+
+Ewolucja każdego speciala wzmacnia jego cechę (krótszy skok, większy promień, więcej wieżyczek…).
+
+### Jednostki bezfrakcyjne (Kontrakt)
+
+Efekt zależy od **liczby różnych frakcji na planszy** (neutralne się nie liczą) i zmienia się z poziomem:
+
+| Poziom | Warunek | Najemnik |
+|---|---|---|
+| 0 | tylko neutralne | brak efektu |
+| I | 1 frakcja | aura: melee +20% obrażeń |
+| II | 2 frakcje | aura: **wszyscy** +12% obrażeń **i** Oznaczenie celów (+20%) |
+
+Kolejne neutralne karty i poziom III dojdą z trzecią frakcją. Technicznie każda cecha ma warunek `min_factions`/`max_factions`, więc nowe kontrakty to same dane.
+
+### Pomysły na później
+- Inżynier Tarcz (ludzie): generator osłony przeciw artylerii.
+- Wódz (orkowie): poległy ork nakręca szał całej armii.
+- Zwiadowca (neutralny): oznacza najsilniejszą jednostkę wroga na starcie.
 
 ## Otwarte decyzje
 

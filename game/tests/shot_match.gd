@@ -15,8 +15,8 @@ func _initialize() -> void:
 	var m := MatchScreen.new()
 	var bases: Array[StringName] = [&"citadel", &"war_camp"]
 	m.setup([
-		[&"bastion", &"szturmowiec", &"strzelec", &"lancer", &"medyk"],
-		[&"pancerniak", &"szaleniec", &"siekacz", &"rakieciarz", &"lotniak"],
+		[&"bastion", &"zabojca", &"najemnik", &"siekacz", &"lancer"],
+		[&"pancerniak", &"szaleniec", &"konstruktor", &"szaman", &"bombowiec"],
 	], bases, 3)
 	holder.add_child(m)
 	# Round 1 straight to round 2 draft, so both sides have units on screen.
@@ -30,8 +30,10 @@ func _initialize() -> void:
 	await _save(out + "/draft.png")
 	m._on_pick(1)
 	m._on_pick(0)
-	await _frames(int(60 * (MatchScreen.REVEAL_TIME + 1.2)))
+	await create_timer(MatchScreen.REVEAL_TIME + 2.3).timeout
 	await _save(out + "/battle.png")
+	await create_timer(1.5).timeout
+	await _save(out + "/battle2.png")
 	quit(0)
 
 

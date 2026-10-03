@@ -1,6 +1,14 @@
-[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Wybuch"
+radius = 45
+power = 30
+kind = 7
 
 [resource]
 script = ExtResource("1")
@@ -16,8 +24,9 @@ damage = 16
 attack_interval = 0.8
 attack_range = 30
 speed = 110
-armor_pierce = false
-splash_radius = 0
 size = 9
-evolves_to = &"as_lotniak"
 targets_backline = true
+traits = Array[ExtResource("2")]([SubResource("trait_0")])
+blurb = "Lata nad frontem, poluje na tyły. Wybucha po śmierci."
+glyph = "L"
+evolves_to = &"as_lotniak"

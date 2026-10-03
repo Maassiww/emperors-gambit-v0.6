@@ -48,9 +48,29 @@ static func unit_ids_sorted() -> Array[StringName]:
 	return ids
 
 
-## Units that can be put in a deck (evolved forms are excluded).
+## Units that can be put in a deck (evolved forms and summons are excluded).
 static func card_ids_sorted() -> Array[StringName]:
-	return unit_ids_sorted().filter(func(id: StringName) -> bool: return not units[id].is_evolution)
+	return unit_ids_sorted().filter(func(id: StringName) -> bool: return units[id].is_card())
+
+
+## Empty string if the deck is legal, otherwise a short reason for the player.
+static func deck_error(deck: Array) -> String:
+	ensure_loaded()
+	if deck.size() != config.deck_size:
+		return "Deck musi mieć %d kart" % config.deck_size
+	var specials := 0
+	var seen := {}
+	for id in deck:
+		if not units.has(id) or not units[id].is_card():
+			return "Nieznana karta: %s" % id
+		if seen.has(id):
+			return "Karta dwa razy: %s" % units[id].display_name
+		seen[id] = true
+		if units[id].is_special():
+			specials += 1
+	if specials > config.max_specials_in_deck:
+		return "Maks. %d speciale w decku" % config.max_specials_in_deck
+	return ""
 
 
 static func base_ids_sorted() -> Array[StringName]:

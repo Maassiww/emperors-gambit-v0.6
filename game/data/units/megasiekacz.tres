@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
 
@@ -10,13 +10,12 @@ faction = &"orks"
 unit_class = 1
 role = 2
 count_per_pick = 4
-hp = 96
+hp = 105
 armor = 0
 damage = 8
 attack_interval = 0.3
 attack_range = 190
 speed = 60
-armor_pierce = false
-splash_radius = 0
 size = 11
+blurb = "Masa szybkiego ostrzału."
 is_evolution = true

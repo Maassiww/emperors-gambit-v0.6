@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
 
@@ -16,7 +16,7 @@ damage = 55
 attack_interval = 2.2
 attack_range = 340
 speed = 0
-armor_pierce = false
 splash_radius = 50
 size = 9
+blurb = "Artyleria obszarowa. Stoi w miejscu."
 evolves_to = &"rakietowy_boss"

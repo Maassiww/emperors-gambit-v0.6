@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Ogłuszenie"
+delay = 2.5
+period = 5.0
+cast_range = 280
+radius = 80
+duration = 2.0
+power = 30
+kind = 3
+
+[resource]
+script = ExtResource("1")
+id = &"arcypsionik"
+display_name = "Arcypsionik"
+faction = &"humans"
+unit_class = 2
+role = 6
+count_per_pick = 1
+hp = 315
+armor = 3
+damage = 21
+attack_interval = 1.0
+attack_range = 200
+speed = 45
+size = 14
+traits = Array[ExtResource("2")]([SubResource("trait_0")])
+blurb = "Co 6 s ogłusza największą grupę wrogów."
+glyph = "P"
+power_bonus = 2.0
+is_evolution = true

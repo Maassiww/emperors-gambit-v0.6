@@ -1,13 +1,23 @@
 class_name BattleSim
 extends RefCounted
 ## Deterministic auto-battle between two armies.
-## Fixed tick, integer positions (0.1 px), two-phase updates so unit order never matters.
+## Fixed tick, integer positions (0.1 px), two-phase updates so unit order never matters:
+## units first collect hits, statuses and summons, then everything is applied at once.
 ## Player 0 starts at the bottom of the arena, player 1 at the top.
 
 const SCALE := 10
 const RETARGET_TICKS := 10
+## Zabójca lands this far behind its victim.
+const TELEPORT_BEHIND := 25
 
 enum Outcome { ELIMINATION, HP, DAMAGE, COIN }
+enum Effect { STUN, STUN_IMMUNE, CORROSION, MARK }
+
+
+class StatusEffect:
+	var power: int
+	var until: int
+	var length: int
 
 
 class SimUnit:
@@ -30,6 +40,29 @@ class SimUnit:
 	var alive := true
 	var next_x: int
 	var next_y: int
+	## Traits active in this battle (contract levels already resolved) and their countdowns.
+	var traits: Array[TraitData] = []
+	var timers: Array[int] = []
+	var statuses: Dictionary = {}
+	## Strength (%) of this unit's purity-scaled auras.
+	var aura_pct := 100
+	## Recomputed every tick from allied auras.
+	var buff_damage := 0
+	var buff_attack_speed := 0
+	var buff_move := 0
+	var buff_armor := 0
+	var teleported := false
+	var exploded := false
+	var summoner := -1
+	## Cached data flags (hot loops).
+	var flying := false
+	var hits_air := false
+
+	func get_trait(kind: TraitData.Kind) -> TraitData:
+		for t in traits:
+			if t.kind == kind:
+				return t
+		return null
 
 
 class Result:
@@ -49,7 +82,8 @@ var units: Array[SimUnit] = []
 var tick := 0
 var finished := false
 var result := Result.new()
-## Events of the last step, for the UI: {type, src, dst, amount} / {type, owner}.
+## Events of the last step, for the UI: hit / heal / death / ability / teleport / pulse / explode / blast / build.
+## Hits are [src, dst, amount] or [src, dst, amount, true] for area damage.
 var events: Array[Dictionary] = []
 
 var _cfg: GameConfig
@@ -59,6 +93,12 @@ var _max_ticks: int
 var _overtime_tick: int
 var _ability_used: Array[bool] = [false, false]
 var _ability_until: Array[int] = [0, 0]
+## Distinct factions on each side (neutral excluded) and distinct card types per faction.
+var _factions: Array[int] = [0, 0]
+var _types: Array[Dictionary] = [{}, {}]
+var _taunters: Array[SimUnit] = []
+var _pending_status: Array[Array] = []
+var _pending_spawn: Array[Array] = []
 
 
 func _init(armies: Array[Army], bases: Array[BaseData], cfg: GameConfig, rng: RandomNumberGenerator) -> void:
@@ -68,6 +108,7 @@ func _init(armies: Array[Army], bases: Array[BaseData], cfg: GameConfig, rng: Ra
 	_max_ticks = int(cfg.battle_max_seconds * cfg.ticks_per_second)
 	_overtime_tick = int(cfg.overtime_after_seconds * cfg.ticks_per_second)
 	for owner in 2:
+		_read_board(owner, armies[owner])
 		_spawn(owner, armies[owner])
 		result.hp_start[owner] = _hp_total(owner)
 	for owner in 2:
@@ -92,7 +133,10 @@ func step() -> void:
 			if _ability_used[owner]:
 				events.append({"type": "ability", "owner": owner, "ability": _bases[owner].ability})
 	_update_rally_banner()
+	_prepare_tick()
 	var hits: Array[Array] = []
+	_pending_status.clear()
+	_pending_spawn.clear()
 	for u in units:
 		if u.alive:
 			_act(u, hits)
@@ -101,6 +145,9 @@ func step() -> void:
 		u.x = u.next_x
 		u.y = u.next_y
 	_apply_hits(hits)
+	_apply_statuses()
+	_spawn_pending()
+	_expire_statuses()
 	_check_end()
 
 
@@ -123,7 +170,42 @@ func ability_active(owner: int) -> bool:
 	return _ability_used[owner] and tick < _ability_until[owner]
 
 
+## Distinct factions on the owner's board (neutral excluded): the level of neutral contracts.
+func factions_on_board(owner: int) -> int:
+	return _factions[owner]
+
+
+func has_status(u: SimUnit, effect: Effect) -> bool:
+	return u.statuses.has(effect) and tick < u.statuses[effect].until
+
+
+func armor_of(u: SimUnit) -> int:
+	var corrosion: int = u.statuses[Effect.CORROSION].power if has_status(u, Effect.CORROSION) else 0
+	return maxi(0, u.armor + u.buff_armor - corrosion)
+
+
 # --- setup -------------------------------------------------------------------
+
+func _read_board(owner: int, army: Army) -> void:
+	var factions := {}
+	for id in army.ids_sorted():
+		if army.counts[id] <= 0:
+			continue
+		var f := GameDB.unit(id).faction
+		_types[owner][f] = _types[owner].get(f, 0) + 1
+		if f != UnitData.NEUTRAL:
+			factions[f] = true
+	_factions[owner] = factions.size()
+
+
+## Purity-scaled auras: full with no foreign card types on the board, half with one, none with more.
+func _purity_pct(owner: int, faction: StringName) -> int:
+	var foreign := 0
+	for f in _types[owner]:
+		if f != faction:
+			foreign += _types[owner][f]
+	return [100, 50][foreign] if foreign < 2 else 0
+
 
 func _spawn(owner: int, army: Army) -> void:
 	var rows: Array[Array] = [[], [], [], [], []]
@@ -143,20 +225,23 @@ func _spawn(owner: int, army: Army) -> void:
 			var d := mini(dist, max_dist)
 			var y := _cfg.arena_height / 2 + (d if owner == 0 else -d)
 			for i in n:
-				_add_unit(owner, list[start + i], _cfg.arena_width * (i + 1) / (n + 1), y)
+				_add_unit(owner, list[start + i], _cfg.arena_width * (i + 1) / (n + 1) * SCALE, y * SCALE)
 			dist += _cfg.row_line_spacing
 		dist += _cfg.row_gap
 
 
-func _add_unit(owner: int, data: UnitData, x: int, y: int) -> void:
+## x, y in sim units (px * SCALE).
+func _add_unit(owner: int, data: UnitData, x: int, y: int) -> SimUnit:
 	var u := SimUnit.new()
 	u.uid = units.size()
 	u.owner = owner
 	u.data = data
-	u.x = x * SCALE
-	u.y = y * SCALE
+	u.x = x
+	u.y = y
 	u.next_x = u.x
 	u.next_y = u.y
+	u.flying = data.is_flying()
+	u.hits_air = data.can_hit_air()
 	u.max_hp = data.hp
 	u.hp = u.max_hp
 	u.damage = data.damage
@@ -167,17 +252,66 @@ func _add_unit(owner: int, data: UnitData, x: int, y: int) -> void:
 	u.interval = maxi(1, _seconds_to_ticks(data.attack_interval))
 	u.attack_range = data.attack_range * SCALE
 	u.speed = data.speed * SCALE / _cfg.ticks_per_second
+	for t in data.traits:
+		if t.active_for(_factions[owner]):
+			u.traits.append(t)
+			u.timers.append(_seconds_to_ticks(t.delay))
+	u.aura_pct = _purity_pct(owner, data.faction)
 	units.append(u)
+	return u
 
 
-# --- per-unit behaviour ------------------------------------------------------
+# --- per tick ----------------------------------------------------------------
+
+## Collects taunters and recomputes aura buffs from current positions.
+func _prepare_tick() -> void:
+	_taunters.clear()
+	for u in units:
+		u.buff_damage = 0
+		u.buff_attack_speed = 0
+		u.buff_move = 0
+		u.buff_armor = 0
+	for s in units:
+		if not s.alive:
+			continue
+		for t in s.traits:
+			if t.kind == TraitData.Kind.TAUNT:
+				_taunters.append(s)
+			elif t.kind == TraitData.Kind.AURA:
+				_apply_aura(s, t)
+
+
+func _apply_aura(s: SimUnit, t: TraitData) -> void:
+	var pct := s.aura_pct if t.scales_with_purity else 100
+	if pct <= 0:
+		return
+	var r := t.radius * SCALE
+	for a in units:
+		if not a.alive or a.owner != s.owner or _dist_sq(s, a) > r * r:
+			continue
+		match t.affects:
+			TraitData.Affects.FACTION:
+				if a.data.faction != s.data.faction:
+					continue
+			TraitData.Affects.MELEE:
+				if a.data.unit_class != UnitData.UnitClass.MELEE:
+					continue
+		a.buff_damage = maxi(a.buff_damage, t.buff_damage_pct * pct / 100)
+		a.buff_attack_speed = maxi(a.buff_attack_speed, t.buff_attack_speed_pct * pct / 100)
+		a.buff_move = maxi(a.buff_move, t.buff_move_pct * pct / 100)
+		a.buff_armor = maxi(a.buff_armor, t.buff_armor * pct / 100)
+
 
 func _act(u: SimUnit, hits: Array[Array]) -> void:
 	u.next_x = u.x
 	u.next_y = u.y
 	if u.cooldown > 0:
 		u.cooldown -= 1
+	if has_status(u, Effect.STUN):
+		return
 	u.retarget_in -= 1
+	if _tick_traits(u, hits):
+		return
 	if u.data.is_healer():
 		_act_healer(u, hits)
 		return
@@ -187,17 +321,48 @@ func _act(u: SimUnit, hits: Array[Array]) -> void:
 	if u.target < 0:
 		return
 	var t := units[u.target]
-	if _dist_sq(u, t) > u.attack_range * u.attack_range:
+	var in_range := _dist_sq(u, t) <= u.attack_range * u.attack_range
+	var kamikaze := u.get_trait(TraitData.Kind.KAMIKAZE)
+	if kamikaze != null:
+		if in_range:
+			_explode(u, kamikaze, hits)
+		else:
+			_move_towards(u, t)
+		return
+	if not in_range:
 		_move_towards(u, t)
 	elif u.cooldown == 0:
 		u.cooldown = _effective_interval(u)
-		var dmg := _damage_after_armor(u, t)
-		hits.append([u.uid, t.uid, dmg])
+		hits.append([u.uid, t.uid, _damage(u, t, u.damage)])
+		var mark := u.get_trait(TraitData.Kind.MARK_ON_HIT)
+		if mark != null:
+			_pending_status.append([t.uid, Effect.MARK, mark.power, _seconds_to_ticks(mark.duration)])
 		if u.data.splash_radius > 0:
 			var r := u.data.splash_radius * SCALE
 			for e in units:
 				if e.alive and e.owner != u.owner and e.uid != t.uid and not e.data.is_flying() and _dist_sq(t, e) <= r * r:
-					hits.append([u.uid, e.uid, _damage_after_armor(u, e) / 2])
+					hits.append([u.uid, e.uid, _damage(u, e, u.damage) / 2, true])
+
+
+## Timed traits. Returns true when the trait used up the unit's turn (teleport).
+func _tick_traits(u: SimUnit, hits: Array[Array]) -> bool:
+	for i in u.traits.size():
+		var t := u.traits[i]
+		match t.kind:
+			TraitData.Kind.TELEPORT_BACKLINE:
+				u.timers[i] -= 1
+				if not u.teleported and u.timers[i] <= 0 and _teleport(u):
+					return true
+			TraitData.Kind.STUN_PULSE:
+				u.timers[i] -= 1
+				if u.timers[i] <= 0 and _stun_pulse(u, t, hits):
+					u.timers[i] = _seconds_to_ticks(t.period)
+			TraitData.Kind.BUILD:
+				u.timers[i] -= 1
+				if u.timers[i] <= 0:
+					_build(u, t)
+					u.timers[i] = _seconds_to_ticks(t.period)
+	return false
 
 
 func _act_healer(u: SimUnit, hits: Array[Array]) -> void:
@@ -208,7 +373,10 @@ func _act_healer(u: SimUnit, hits: Array[Array]) -> void:
 			_move_towards(u, p)
 		elif u.cooldown == 0:
 			u.cooldown = _effective_interval(u)
-			hits.append([u.uid, p.uid, -u.damage])
+			var heal := u.damage
+			if p.get_trait(TraitData.Kind.TAUNT) != null:
+				heal = heal * _cfg.taunt_heal_pct / 100
+			hits.append([u.uid, p.uid, -heal])
 		return
 	# Nobody to heal: follow the army, staying at own range from the nearest enemy.
 	var enemy := _pick_enemy(u)
@@ -216,29 +384,77 @@ func _act_healer(u: SimUnit, hits: Array[Array]) -> void:
 		_move_towards(u, units[enemy])
 
 
+# --- targeting ---------------------------------------------------------------
+
+## Priority: Taunt > the unit's own trait (bomb: densest group, hunter: backline) > nearest.
 func _pick_enemy(u: SimUnit) -> int:
-	# Backline hunters (specials) go for ranged/special units first, everyone else takes the nearest.
+	var taunter := _taunter_for(u)
+	if taunter >= 0:
+		return taunter
+	# Bombs and teleporting hunters commit to their victim until it dies.
+	var sticky := u.get_trait(TraitData.Kind.KAMIKAZE) != null or (u.teleported and u.data.targets_backline)
+	if sticky and u.target >= 0 and units[u.target].alive and units[u.target].owner != u.owner:
+		return u.target
+	if u.get_trait(TraitData.Kind.KAMIKAZE) != null:
+		return _densest_enemy(u, u.get_trait(TraitData.Kind.KAMIKAZE).radius * SCALE, -1)
 	if u.data.targets_backline:
-		var back := _nearest(u, func(e: SimUnit) -> bool: return e.data.unit_class != UnitData.UnitClass.MELEE)
+		var back := _nearest(u, true)
 		if back >= 0:
 			return back
-	return _nearest(u, func(_e: SimUnit) -> bool: return true)
+	return _nearest(u, false)
 
 
-func _nearest(u: SimUnit, filter: Callable) -> int:
+## Nearest enemy taunter that has u inside its taunt radius, or -1.
+func _taunter_for(u: SimUnit) -> int:
 	var best := -1
 	var best_d := 0
+	for s in _taunters:
+		if s.owner == u.owner or not s.alive or not _can_target(u, s):
+			continue
+		var r := s.get_trait(TraitData.Kind.TAUNT).radius * SCALE
+		var d := _dist_sq(u, s)
+		if d <= r * r and (best < 0 or d < best_d):
+			best = s.uid
+			best_d = d
+	return best
+
+
+func _can_target(u: SimUnit, e: SimUnit) -> bool:
+	return not e.flying or u.hits_air
+
+
+func _nearest(u: SimUnit, backline_only: bool) -> int:
+	var best := -1
+	var best_d := 0
+	var air := u.hits_air
 	for e in units:
-		if not e.alive or e.owner == u.owner:
+		if not e.alive or e.owner == u.owner or (not air and e.flying):
 			continue
-		if e.data.is_flying() and not u.data.can_hit_air():
-			continue
-		if not filter.call(e):
+		if backline_only and e.data.unit_class == UnitData.UnitClass.MELEE:
 			continue
 		var d := _dist_sq(u, e)
 		if best < 0 or d < best_d:
 			best = e.uid
 			best_d = d
+	return best
+
+
+## Enemy (ground) with the most enemies around it within r, optionally only within max_range of u.
+func _densest_enemy(u: SimUnit, r: int, max_range: int) -> int:
+	var best := -1
+	var best_n := 0
+	for e in units:
+		if not e.alive or e.owner == u.owner or not _can_target(u, e):
+			continue
+		if max_range >= 0 and _dist_sq(u, e) > max_range * max_range:
+			continue
+		var n := 0
+		for o in units:
+			if o.alive and o.owner == e.owner and _can_target(u, o) and _dist_sq(e, o) <= r * r:
+				n += 1
+		if n > best_n:
+			best = e.uid
+			best_n = n
 	return best
 
 
@@ -255,6 +471,75 @@ func _pick_patient(u: SimUnit) -> int:
 	return best
 
 
+# --- trait actions -----------------------------------------------------------
+
+## Jumps behind the rearmost enemy ranged/special ground unit (closest to own x on ties).
+func _teleport(u: SimUnit) -> bool:
+	var best := -1
+	var best_row := -1
+	var best_dx := 0
+	for e in units:
+		if not e.alive or e.owner == u.owner or e.data.is_flying() or e.data.unit_class == UnitData.UnitClass.MELEE:
+			continue
+		var row := e.data.formation_row()
+		var dx := absi(e.x - u.x)
+		if row > best_row or (row == best_row and dx < best_dx):
+			best = e.uid
+			best_row = row
+			best_dx = dx
+	if best < 0:
+		return false
+	var t := units[best]
+	var behind := -1 if u.owner == 0 else 1
+	var y := clampi(t.y + behind * TELEPORT_BEHIND * SCALE, 20 * SCALE, (_cfg.arena_height - 20) * SCALE)
+	events.append({"type": "teleport", "src": u.uid, "from": Vector2i(u.x, u.y), "to": Vector2i(t.x, y)})
+	u.next_x = t.x
+	u.next_y = y
+	u.teleported = true
+	u.target = best
+	u.retarget_in = RETARGET_TICKS
+	return true
+
+
+func _stun_pulse(u: SimUnit, t: TraitData, hits: Array[Array]) -> bool:
+	var r := t.radius * SCALE
+	var center_id := _densest_enemy(u, r, t.cast_range * SCALE)
+	if center_id < 0:
+		return false
+	var center := units[center_id]
+	for e in units:
+		if e.alive and e.owner != u.owner and _dist_sq(center, e) <= r * r:
+			if t.power > 0:
+				hits.append([u.uid, e.uid, _damage(u, e, t.power), true])
+			_pending_status.append([e.uid, Effect.STUN, 0, _seconds_to_ticks(t.duration)])
+	events.append({"type": "pulse", "src": u.uid, "pos": Vector2i(center.x, center.y), "r": t.radius})
+	return true
+
+
+func _build(u: SimUnit, t: TraitData) -> void:
+	var alive := 0
+	for s in units:
+		if s.alive and s.summoner == u.uid:
+			alive += 1
+	if alive >= t.max_count:
+		return
+	var forward := -1 if u.owner == 0 else 1
+	_pending_spawn.append([u.owner, t.summon, u.x, u.y + forward * 12 * SCALE, u.uid])
+
+
+func _explode(u: SimUnit, t: TraitData, hits: Array[Array]) -> void:
+	var r := t.radius * SCALE
+	for e in units:
+		if e.alive and e.owner != u.owner and not e.data.is_flying() and _dist_sq(u, e) <= r * r:
+			hits.append([u.uid, e.uid, _damage(u, e, u.damage), true])
+			if t.stacks > 0:
+				_pending_status.append([e.uid, Effect.CORROSION, t.stacks, _seconds_to_ticks(t.duration)])
+	u.exploded = true
+	events.append({"type": "explode", "src": u.uid, "pos": Vector2i(u.x, u.y), "r": t.radius})
+
+
+# --- movement ----------------------------------------------------------------
+
 func _move_towards(u: SimUnit, t: SimUnit) -> void:
 	var dx := t.x - u.x
 	var dy := t.y - u.y
@@ -266,63 +551,103 @@ func _move_towards(u: SimUnit, t: SimUnit) -> void:
 	u.next_y = u.y + dy * step / dist
 
 
-func _damage_after_armor(u: SimUnit, t: SimUnit) -> int:
-	var dmg := u.damage * (100 + u.rage * _bases[u.owner].rage_pct_per_stack) / 100
-	dmg = dmg * overtime_pct() / 100
-	if u.data.armor_pierce:
-		return dmg
-	return maxi(dmg - t.armor, maxi(1, dmg / 5))
-
-
 ## Pushes overlapping allies apart (same layer only: flyers pass over ground units).
 ## Reads current positions, writes next positions, so unit order does not matter.
 func _separate() -> void:
+	# Hot loop: plain packed arrays and early rejects instead of object access.
 	var n := units.size()
+	var xs := PackedInt32Array()
+	var ys := PackedInt32Array()
+	var rs := PackedInt32Array()
+	var groups := PackedInt32Array()
+	xs.resize(n)
+	ys.resize(n)
+	rs.resize(n)
+	groups.resize(n)
 	for i in n:
-		var a := units[i]
-		if not a.alive:
+		var u := units[i]
+		xs[i] = u.x
+		ys[i] = u.y
+		rs[i] = u.data.size * SCALE
+		groups[i] = (u.owner * 2 + (1 if u.flying else 0)) if u.alive else -1
+	for i in n:
+		var g := groups[i]
+		if g < 0:
 			continue
+		var xi := xs[i]
+		var yi := ys[i]
+		var ri := rs[i]
 		for j in range(i + 1, n):
-			var b := units[j]
-			if not b.alive or b.owner != a.owner or b.data.is_flying() != a.data.is_flying():
+			if groups[j] != g:
 				continue
-			var min_d := (a.data.size + b.data.size) * SCALE
-			var dx := b.x - a.x
-			var dy := b.y - a.y
-			var d2 := dx * dx + dy * dy
-			if d2 >= min_d * min_d:
+			var min_d := ri + rs[j]
+			var dx := xs[j] - xi
+			if dx >= min_d or dx <= -min_d:
 				continue
-			var d := int(sqrt(float(d2)))
-			if d == 0:
-				# Same spot: split sideways, direction fixed by uid order.
-				dx = SCALE
-				dy = 0
-				d = SCALE
-			var push := (min_d - d) / 2
-			a.next_x -= dx * push / d
-			a.next_y -= dy * push / d
-			b.next_x += dx * push / d
-			b.next_y += dy * push / d
+			var dy := ys[j] - yi
+			if dy >= min_d or dy <= -min_d:
+				continue
+			_push_apart(units[i], units[j])
 
 
-# --- buffs -------------------------------------------------------------------
+func _push_apart(a: SimUnit, b: SimUnit) -> void:
+	var min_d := (a.data.size + b.data.size) * SCALE
+	var dx := b.x - a.x
+	var dy := b.y - a.y
+	var d2 := dx * dx + dy * dy
+	if d2 >= min_d * min_d:
+		return
+	var d := int(sqrt(float(d2)))
+	if d == 0:
+		# Same spot: split sideways, direction fixed by uid order.
+		dx = SCALE
+		dy = 0
+		d = SCALE
+	var push := (min_d - d) / 2
+	# Stationary units (turrets, artillery) are not shoved around.
+	var a_fixed := a.data.speed == 0
+	var b_fixed := b.data.speed == 0
+	if not a_fixed:
+		a.next_x -= dx * push / d * (2 if b_fixed else 1)
+		a.next_y -= dy * push / d * (2 if b_fixed else 1)
+	if not b_fixed:
+		b.next_x += dx * push / d * (2 if a_fixed else 1)
+		b.next_y += dy * push / d * (2 if a_fixed else 1)
+
+
+# --- damage and buffs --------------------------------------------------------
+
+## Final damage of one hit: buffs, rage, overtime, execute, armor (unless pierce), mark.
+func _damage(u: SimUnit, t: SimUnit, base_damage: int) -> int:
+	var dmg := base_damage * (100 + u.rage * _bases[u.owner].rage_pct_per_stack + u.buff_damage) / 100
+	dmg = dmg * overtime_pct() / 100
+	var execute := u.get_trait(TraitData.Kind.EXECUTE)
+	if execute != null and t.hp * 100 < t.max_hp * execute.threshold_pct:
+		dmg = dmg * (100 + execute.power) / 100
+	if not u.data.armor_pierce:
+		dmg = dmg * UnitData.armor_pass_pct(armor_of(t), _cfg) / 100
+	if has_status(t, Effect.MARK):
+		dmg = dmg * (100 + t.statuses[Effect.MARK].power) / 100
+	return maxi(1, dmg)
+
 
 func _speed_pct(u: SimUnit) -> int:
+	var pct := 100 + u.buff_move
 	var base := _bases[u.owner]
 	if base.ability == BaseData.Ability.WAR_DRUMS and ability_active(u.owner):
-		return 100 + base.ability_power
-	return 100
+		pct += base.ability_power
+	return pct
 
 
 func _effective_interval(u: SimUnit) -> int:
 	var base := _bases[u.owner]
-	var bonus := 0
+	var bonus := u.buff_attack_speed
 	if ability_active(u.owner):
 		match base.ability:
 			BaseData.Ability.WAR_DRUMS:
-				bonus = base.ability_power / 2
+				bonus += base.ability_power / 2
 			BaseData.Ability.RALLY_BANNER:
-				bonus = base.ability_power
+				bonus += base.ability_power
 	return maxi(1, u.interval * 100 / (100 + bonus))
 
 
@@ -340,6 +665,27 @@ func _update_rally_banner() -> void:
 # --- resolution --------------------------------------------------------------
 
 func _apply_hits(hits: Array[Array]) -> void:
+	_deal(hits)
+	for u in units:
+		if u.alive and u.exploded:
+			u.hp = 0
+	# Deaths can trigger more damage (death blasts), which can kill more units.
+	while true:
+		var dead: Array[SimUnit] = []
+		for u in units:
+			if u.alive and u.hp <= 0:
+				u.alive = false
+				events.append({"type": "death", "dst": u.uid})
+				dead.append(u)
+		if dead.is_empty():
+			break
+		var extra: Array[Array] = []
+		for d in dead:
+			_on_death(d, extra)
+		_deal(extra)
+
+
+func _deal(hits: Array[Array]) -> void:
 	for h in hits:
 		var src := units[h[0]]
 		var t := units[h[1]]
@@ -352,21 +698,71 @@ func _apply_hits(hits: Array[Array]) -> void:
 			var dealt := mini(amount, t.hp)
 			t.hp -= dealt
 			result.damage_dealt[src.owner] += dealt
-			events.append({"type": "hit", "src": src.uid, "dst": t.uid, "amount": dealt})
-	for u in units:
-		if u.alive and u.hp <= 0:
-			u.alive = false
-			events.append({"type": "death", "dst": u.uid})
-			_on_death(u)
+			# Area hits (splash, blasts, pulses) are drawn by their own effect, not as shots.
+			events.append({"type": "hit", "src": src.uid, "dst": t.uid, "amount": dealt, "area": h.size() > 3})
 
 
-func _on_death(dead: SimUnit) -> void:
+func _on_death(dead: SimUnit, extra: Array[Array]) -> void:
+	var blast := dead.get_trait(TraitData.Kind.DEATH_BLAST)
+	if blast != null:
+		var r := blast.radius * SCALE
+		for e in units:
+			if e.alive and e.owner != dead.owner and _dist_sq(dead, e) <= r * r:
+				extra.append([dead.uid, e.uid, _damage(dead, e, blast.power), true])
+		events.append({"type": "blast", "src": dead.uid, "pos": Vector2i(dead.x, dead.y), "r": blast.radius})
 	var base := _bases[dead.owner]
 	if base.passive != BaseData.Passive.RAGE_ON_ALLY_DEATH or dead.data.faction != base.faction:
 		return
 	for u in units:
 		if u.alive and u.owner == dead.owner and u.data.faction == base.faction:
 			u.rage = mini(u.rage + 1, base.passive_value)
+
+
+func _apply_statuses() -> void:
+	for p in _pending_status:
+		var u := units[p[0]]
+		if u.alive:
+			_add_status(u, p[1], p[2], p[3])
+
+
+func _add_status(u: SimUnit, effect: Effect, power: int, ticks: int) -> void:
+	match effect:
+		Effect.STUN:
+			# Immunity starts with the stun and lasts until stun_immunity_seconds after it.
+			if has_status(u, Effect.STUN_IMMUNE):
+				return
+			_set_status(u, Effect.STUN, 0, ticks)
+			_set_status(u, Effect.STUN_IMMUNE, 0, ticks + _seconds_to_ticks(_cfg.stun_immunity_seconds))
+		Effect.CORROSION:
+			var stacks: int = u.statuses[effect].power if has_status(u, effect) else 0
+			_set_status(u, effect, mini(_cfg.corrosion_max_stacks, stacks + power), ticks)
+		Effect.MARK:
+			var cur: int = u.statuses[effect].power if has_status(u, effect) else 0
+			_set_status(u, effect, maxi(cur, power), ticks)
+
+
+func _set_status(u: SimUnit, effect: Effect, power: int, ticks: int) -> void:
+	var s := StatusEffect.new()
+	s.power = power
+	s.until = tick + ticks
+	s.length = ticks
+	u.statuses[effect] = s
+
+
+func _expire_statuses() -> void:
+	for u in units:
+		if u.statuses.is_empty():
+			continue
+		for effect in u.statuses.keys():
+			if tick >= u.statuses[effect].until:
+				u.statuses.erase(effect)
+
+
+func _spawn_pending() -> void:
+	for s in _pending_spawn:
+		var u := _add_unit(s[0], GameDB.unit(s[1]), s[2], s[3])
+		u.summoner = s[4]
+		events.append({"type": "build", "src": s[4], "dst": u.uid})
 
 
 func _check_end() -> void:
@@ -399,7 +795,7 @@ func _anyone_can_attack() -> bool:
 		if not u.alive or u.data.is_healer():
 			continue
 		for e in units:
-			if e.alive and e.owner != u.owner and (u.data.can_hit_air() or not e.data.is_flying()):
+			if e.alive and e.owner != u.owner and _can_target(u, e):
 				return true
 	return false
 

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Ogłuszenie"
+delay = 3.0
+period = 6.0
+cast_range = 260
+radius = 60
+duration = 1.5
+power = 20
+kind = 3
+
+[resource]
+script = ExtResource("1")
+id = &"psionik"
+display_name = "Psionik"
+faction = &"humans"
+unit_class = 2
+role = 6
+count_per_pick = 1
+hp = 210
+armor = 2
+damage = 14
+attack_interval = 1.0
+attack_range = 200
+speed = 45
+size = 12
+traits = Array[ExtResource("2")]([SubResource("trait_0")])
+blurb = "Co 6 s ogłusza największą grupę wrogów."
+glyph = "P"
+power_bonus = 2.0
+evolves_to = &"arcypsionik"
