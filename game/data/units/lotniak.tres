@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"lotniak"
+display_name = "Lotniak"
+faction = &"orks"
+unit_class = 2
+role = 4
+count_per_pick = 3
+hp = 80
+armor = 1
+damage = 16
+attack_interval = 0.8
+attack_range = 30
+speed = 110
+armor_pierce = false
+splash_radius = 0

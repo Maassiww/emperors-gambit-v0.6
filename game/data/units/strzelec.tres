@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"strzelec"
+display_name = "Strzelec"
+faction = &"humans"
+unit_class = 1
+role = 2
+count_per_pick = 2
+hp = 140
+armor = 3
+damage = 9
+attack_interval = 0.25
+attack_range = 220
+speed = 45
+armor_pierce = false
+splash_radius = 0

@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"rakieciarz"
+display_name = "Rakieciarz"
+faction = &"orks"
+unit_class = 1
+role = 3
+count_per_pick = 2
+hp = 70
+armor = 1
+damage = 45
+attack_interval = 2.2
+attack_range = 260
+speed = 40
+armor_pierce = false
+splash_radius = 50

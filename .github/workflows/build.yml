@@ -53,6 +53,7 @@ jobs:
       - name: Test
         run: |
           godot --headless --path game --import || true
+          godot --headless --path game --script res://tests/run_tests.gd
           godot --headless --path game --script res://tests/smoke_test.gd | tee test.log
           grep -q "SMOKE OK" test.log
 

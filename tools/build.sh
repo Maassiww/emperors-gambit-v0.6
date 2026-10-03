@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 export GODOT_SILENCE_ROOT_WARNING=1
 mkdir -p build/web build/android
 godot --headless --path game --import >/dev/null 2>&1 || true
+godot --headless --path game --script res://tests/run_tests.gd 2>&1 | grep -E "FAIL|TESTS" | tee /dev/stderr | grep -q " 0 failed" || { echo "TESTS FAILED"; exit 1; }
 godot --headless --path game --script res://tests/smoke_test.gd 2>&1 | grep -q "SMOKE OK" || { echo "SMOKE FAILED"; exit 1; }
 godot --headless --path game --export-release Web ../build/web/index.html 2>&1 | grep -E "ERROR" || true
 godot --headless --path game --export-debug Android ../build/android/emperors-gambit.apk 2>&1 | grep -E "ERROR" || true

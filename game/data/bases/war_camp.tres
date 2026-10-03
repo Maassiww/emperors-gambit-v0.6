@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="BaseData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/base_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"war_camp"
+display_name = "Obóz Wojenny"
+faction = &"orks"
+passive = 2
+passive_value = 6
+ability = 2
+ability_power = 35
+ability_duration = 3.0

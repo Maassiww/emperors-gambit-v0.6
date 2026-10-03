@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"lancer"
+display_name = "Lancer"
+faction = &"humans"
+unit_class = 1
+role = 3
+count_per_pick = 1
+hp = 160
+armor = 3
+damage = 90
+attack_interval = 2.0
+attack_range = 280
+speed = 40
+armor_pierce = true
+splash_radius = 0

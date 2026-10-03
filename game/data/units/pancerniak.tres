@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"pancerniak"
+display_name = "Pancerniak"
+faction = &"orks"
+unit_class = 0
+role = 0
+count_per_pick = 2
+hp = 260
+armor = 5
+damage = 22
+attack_interval = 1.1
+attack_range = 30
+speed = 35
+armor_pierce = false
+splash_radius = 0
