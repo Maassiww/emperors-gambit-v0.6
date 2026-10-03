@@ -125,11 +125,16 @@ func _draw_unit(u: BattleSim.SimUnit) -> void:
 	draw_colored_polygon(pts, fill)
 	pts.append(pts[0])
 	draw_polyline(pts, outline, 2.0)
+	# Subclass marks: armored core for heavy melee, dot for stationary artillery.
+	if u.data.role == UnitData.Role.HEAVY:
+		draw_rect(Rect2(p - Vector2(s, s) * 0.45, Vector2(s, s) * 0.9), fill.darkened(0.45))
+	elif u.data.role == UnitData.Role.SLOW:
+		draw_circle(p, s * 0.32, fill.darkened(0.55))
 	if u.hp < u.max_hp:
 		var w := s * 2.0
 		draw_rect(Rect2(p + Vector2(-s, -s - 7), Vector2(w, 3)), Color(0, 0, 0, 0.6))
 		draw_rect(Rect2(p + Vector2(-s, -s - 7), Vector2(w * u.hp / u.max_hp, 3)), Color(0.3, 0.9, 0.3))
-	if u.damage != u.data.damage:
+	if u.data.is_evolution:
 		draw_circle(p, 3.0, Color(1.0, 0.82, 0.3))
 
 

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="UnitData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"lancer_ciezki"
+display_name = "Ciężki Lancer"
+faction = &"humans"
+unit_class = 1
+role = 3
+count_per_pick = 1
+hp = 256
+armor = 4
+damage = 165
+attack_interval = 2.0
+attack_range = 360
+speed = 0
+armor_pierce = true
+splash_radius = 0
+size = 15
+is_evolution = true

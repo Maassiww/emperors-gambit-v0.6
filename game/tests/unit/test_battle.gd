@@ -65,7 +65,7 @@ func test_citadel_armor_only_for_humans() -> void:
 		if u.data.id == &"bastion":
 			assert_eq(u.armor, 8 + GameDB.base(&"citadel").passive_value, "bastion armor")
 		else:
-			assert_eq(u.armor, 5, "ork armor under human base")
+			assert_eq(u.armor, u.data.armor, "ork armor under human base")
 
 
 func test_healers_only_end_immediately_by_hp() -> void:
@@ -86,3 +86,21 @@ func test_overtime_raises_damage() -> void:
 	assert_eq(sim.overtime_pct(), 100)
 	sim.tick = int((GameDB.config.overtime_after_seconds + 2.0) * GameDB.config.ticks_per_second)
 	assert_eq(sim.overtime_pct(), 100 + 2 * GameDB.config.overtime_damage_pct_per_second)
+
+
+func test_formation_order_front_to_back() -> void:
+	var sim := _sim({&"lancer": 1, &"bastion": 1, &"medyk": 1, &"strzelec": 1, &"szturmowiec": 1}, {})
+	var y := {}
+	for u in sim.units:
+		y[u.data.id] = u.y
+	# Player 0 faces up: smaller y = closer to the front.
+	assert_true(y[&"bastion"] < y[&"szturmowiec"], "heavy behind light")
+	assert_true(y[&"szturmowiec"] < y[&"strzelec"], "light melee behind ranged")
+	assert_true(y[&"strzelec"] < y[&"lancer"], "rapid behind slow")
+	assert_true(y[&"lancer"] < y[&"medyk"], "special not last")
+
+
+func test_regular_units_target_nearest() -> void:
+	var sim := _sim({&"szaleniec": 1}, {&"bastion": 1, &"strzelec": 1})
+	var szaleniec := sim.units[0]
+	assert_eq(sim.units[sim._pick_enemy(szaleniec)].data.id, &"bastion", "light melee skipped the front")

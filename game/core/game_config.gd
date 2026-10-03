@@ -26,15 +26,10 @@ enum DrawMode { ALWAYS_WINNER, DRAW_SUDDEN_DEATH }
 ## Winner gets this scaled by the fraction of army HP that survived.
 @export var favor_win_max: int = 30
 @export var favor_loss: int = 10
-## Each card in hand is blessed with chance = favor / favor_max (needs favor >= bless_cost).
+## At most one card per hand is special. With favor >= bless_cost one card is blessed
+## (x units) with chance favor / favor_max. At full favor one card is an evolution instead.
 @export var bless_cost: int = 50
 @export var bless_unit_mult: int = 2
-## At full favor a blessed card becomes an evolution with this chance (costs all favor).
-@export var evolution_chance: float = 0.5
-
-@export_group("Evolution")
-@export var evolution_bonus_pct: int = 25
-@export var max_level: int = 3
 
 @export_group("Battle")
 @export var ticks_per_second: int = 20
@@ -45,7 +40,8 @@ enum DrawMode { ALWAYS_WINNER, DRAW_SUDDEN_DEATH }
 @export var battle_max_seconds: float = 90.0
 @export var arena_width: int = 720
 @export var arena_height: int = 880
-## Distance of each row from the center line, px: melee, ranged, special.
-@export var row_distance: Array[int] = [70, 170, 270]
-@export var row_line_spacing: int = 32
+## Formation: first row this far from the center line, rows stacked behind it.
+@export var first_row_distance: int = 60
+@export var row_line_spacing: int = 28
+@export var row_gap: int = 16
 @export var units_per_line: int = 12

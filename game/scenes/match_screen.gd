@@ -26,7 +26,6 @@ var cfg: GameConfig
 
 var _timer := 0.0
 var _tick_acc := 0.0
-var _speed := 1
 
 var arena: ArenaView
 var _round_label: Label
@@ -39,7 +38,6 @@ var _favor_label: Label
 var _status: Label
 var _cards: Array[Button] = []
 var _gambit_btn: Button
-var _speed_btn: Button
 var _timer_bar: ProgressBar
 var _banner: Label
 var _end_panel: PanelContainer
@@ -78,7 +76,6 @@ func _start_draft() -> void:
 	while game.moves_left(1) > 0:
 		game.submit(1, bot.choose(game.view_for(1)))
 	arena.fog_alpha = 0.8
-	_speed_btn.visible = false
 	_gambit_btn.visible = true
 	_refresh_preview()
 	_next_move()
@@ -115,14 +112,12 @@ func _start_reveal() -> void:
 func _start_battle() -> void:
 	state = State.BATTLE
 	_tick_acc = 0.0
-	_speed_btn.visible = true
 	_status.text = "Walka!"
 
 
 func _end_battle() -> void:
 	state = State.RESULT
 	_timer = RESULT_TIME
-	_speed_btn.visible = false
 	game.finish_round(sim.result)
 	var h: Dictionary = game.history.back()
 	if h.winner == -1:
@@ -163,7 +158,7 @@ func _process(delta: float) -> void:
 			if _timer <= 0.0:
 				_start_battle()
 		State.BATTLE:
-			_tick_acc += delta * cfg.ticks_per_second * _speed
+			_tick_acc += delta * cfg.ticks_per_second
 			while _tick_acc >= 1.0 and not sim.finished:
 				arena.before_step()
 				sim.step()
@@ -373,14 +368,6 @@ func _build_bottom_panel() -> void:
 	_gambit_btn.add_theme_font_size_override("font_size", 19)
 	_gambit_btn.pressed.connect(_on_pick.bind(Match.HOLD))
 	actions.add_child(_gambit_btn)
-	_speed_btn = Button.new()
-	_speed_btn.text = "Prędkość ×1"
-	_speed_btn.custom_minimum_size = Vector2(200, 50)
-	_speed_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_speed_btn.pressed.connect(func() -> void:
-		_speed = 3 - _speed
-		_speed_btn.text = "Prędkość ×%d" % _speed)
-	actions.add_child(_speed_btn)
 
 	_timer_bar = ProgressBar.new()
 	_timer_bar.show_percentage = false

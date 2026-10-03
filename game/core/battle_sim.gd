@@ -126,27 +126,30 @@ func ability_active(owner: int) -> bool:
 # --- setup -------------------------------------------------------------------
 
 func _spawn(owner: int, army: Army) -> void:
-	var rows: Array[Array] = [[], [], []]
+	var rows: Array[Array] = [[], [], [], [], []]
 	for id in army.ids_sorted():
 		var data := GameDB.unit(id)
-		for i in army.count(id):
-			rows[data.unit_class].append(data)
-	for row in 3:
-		var list: Array = rows[row]
+		for i in army.counts[id]:
+			rows[data.formation_row()].append(data)
+	var max_dist := _cfg.arena_height / 2 - 50
+	var dist := _cfg.first_row_distance
+	for list in rows:
+		if list.is_empty():
+			continue
 		var lines := ceili(list.size() / float(_cfg.units_per_line))
 		for line in lines:
 			var start := line * _cfg.units_per_line
 			var n := mini(_cfg.units_per_line, list.size() - start)
-			var dist := _cfg.row_distance[row] + line * _cfg.row_line_spacing
-			var y := _cfg.arena_height / 2 + (dist if owner == 0 else -dist)
+			var d := mini(dist, max_dist)
+			var y := _cfg.arena_height / 2 + (d if owner == 0 else -d)
 			for i in n:
-				var x := _cfg.arena_width * (i + 1) / (n + 1)
-				_add_unit(owner, list[start + i], army.level(list[start + i].id), x, y)
+				_add_unit(owner, list[start + i], _cfg.arena_width * (i + 1) / (n + 1), y)
+			dist += _cfg.row_line_spacing
+		dist += _cfg.row_gap
 
 
-func _add_unit(owner: int, data: UnitData, level: int, x: int, y: int) -> void:
+func _add_unit(owner: int, data: UnitData, x: int, y: int) -> void:
 	var u := SimUnit.new()
-	var mult := 100 + _cfg.evolution_bonus_pct * (level - 1)
 	u.uid = units.size()
 	u.owner = owner
 	u.data = data
@@ -154,9 +157,9 @@ func _add_unit(owner: int, data: UnitData, level: int, x: int, y: int) -> void:
 	u.y = y * SCALE
 	u.next_x = u.x
 	u.next_y = u.y
-	u.max_hp = data.hp * mult / 100
+	u.max_hp = data.hp
 	u.hp = u.max_hp
-	u.damage = data.damage * mult / 100
+	u.damage = data.damage
 	u.armor = data.armor
 	var base := _bases[owner]
 	if base.passive == BaseData.Passive.ARMOR_BONUS and data.faction == base.faction:
@@ -214,8 +217,8 @@ func _act_healer(u: SimUnit, hits: Array[Array]) -> void:
 
 
 func _pick_enemy(u: SimUnit) -> int:
-	# Flankers go for ranged/special units first, everyone else takes the nearest.
-	if u.data.is_flanker():
+	# Backline hunters (specials) go for ranged/special units first, everyone else takes the nearest.
+	if u.data.targets_backline:
 		var back := _nearest(u, func(e: SimUnit) -> bool: return e.data.unit_class != UnitData.UnitClass.MELEE)
 		if back >= 0:
 			return back

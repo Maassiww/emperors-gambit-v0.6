@@ -24,9 +24,7 @@ func _initialize() -> void:
 		await _frames(5)
 		m._on_pick(0)
 	while m.state != MatchScreen.State.DRAFT or m.game.round_number < 2:
-		m._speed = 2
 		await process_frame
-	m._speed = 1
 	m._on_pick(0)
 	await _frames(20)
 	await _save(out + "/draft.png")

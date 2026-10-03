@@ -19,3 +19,5 @@ speed = 110
 armor_pierce = false
 splash_radius = 0
 size = 9
+evolves_to = &"as_lotniak"
+targets_backline = true

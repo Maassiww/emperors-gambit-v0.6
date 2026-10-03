@@ -19,3 +19,4 @@ speed = 45
 armor_pierce = false
 splash_radius = 0
 size = 13
+evolves_to = &"archimedyk"

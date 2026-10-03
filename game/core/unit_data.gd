@@ -24,14 +24,30 @@ enum Role { HEAVY, LIGHT, RAPID, SLOW, FLYER, SUPPORT }
 @export var splash_radius: int = 0
 ## Body radius in px: used for spacing in battle and for drawing.
 @export var size: int = 10
+## Ignores the front and goes for ranged/special units first (specials only, for now).
+@export var targets_backline: bool = false
+## Evolved form this unit turns into (empty = none).
+@export var evolves_to: StringName
+## True for evolved forms: never drafted directly, only reached by evolution.
+@export var is_evolution: bool = false
 
 
 func is_flying() -> bool:
 	return role == Role.FLYER
 
 
-func is_flanker() -> bool:
-	return role == Role.LIGHT
+## Formation row, front to back: heavy melee, light melee, rapid ranged, slow ranged, special.
+func formation_row() -> int:
+	match role:
+		Role.HEAVY:
+			return 0
+		Role.LIGHT:
+			return 1
+		Role.RAPID:
+			return 2
+		Role.SLOW:
+			return 3
+	return 4
 
 
 func is_healer() -> bool:
@@ -43,8 +59,7 @@ func can_hit_air() -> bool:
 
 
 ## Rough per-unit strength, used by the bot and for balance reports.
-func power(level: int = 1, evolution_bonus_pct: int = 25) -> float:
-	var mult := 1.0 + evolution_bonus_pct / 100.0 * (level - 1)
-	var effective_hp := hp * mult * (1.0 + armor * 0.08)
-	var dps := damage * mult / attack_interval
+func power() -> float:
+	var effective_hp := hp * (1.0 + armor * 0.08)
+	var dps := damage / attack_interval
 	return sqrt(effective_hp * dps)

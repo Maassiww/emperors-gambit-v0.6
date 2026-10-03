@@ -35,8 +35,8 @@ func _should_hold(view: Dictionary) -> bool:
 	var cfg := GameDB.config
 	if me.favor >= cfg.favor_max - cfg.favor_per_hold / 2:
 		return false
-	var mine: float = (me.army as Army).power(cfg.evolution_bonus_pct)
-	var theirs: float = (opp.army as Army).power(cfg.evolution_bonus_pct)
+	var mine: float = (me.army as Army).power()
+	var theirs: float = (opp.army as Army).power()
 	# Comfortable lead (in HP or known strength): invest in favor.
 	if me.hp > opp.hp and mine > theirs * 1.3 and rng.randf() < 0.5:
 		return true
@@ -44,14 +44,12 @@ func _should_hold(view: Dictionary) -> bool:
 
 
 func _score(offer: DraftOffer, army: Army, opp_army: Army) -> float:
-	var cfg := GameDB.config
-	var data := GameDB.unit(offer.unit_id)
-	var lvl := army.level(offer.unit_id)
+	var data := GameDB.unit(army.resolve(offer.unit_id))
 	var value: float
 	if offer.kind == DraftOffer.Kind.EVOLVE:
-		value = army.count(offer.unit_id) * (data.power(lvl + 1, cfg.evolution_bonus_pct) - data.power(lvl, cfg.evolution_bonus_pct))
+		value = army.count(offer.unit_id) * (GameDB.unit(data.evolves_to).power() - data.power())
 	else:
-		value = offer.amount * data.power(lvl, cfg.evolution_bonus_pct)
+		value = offer.amount * data.power()
 	return value * _counter_factor(data, opp_army)
 
 

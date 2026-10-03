@@ -48,6 +48,11 @@ static func unit_ids_sorted() -> Array[StringName]:
 	return ids
 
 
+## Units that can be put in a deck (evolved forms are excluded).
+static func card_ids_sorted() -> Array[StringName]:
+	return unit_ids_sorted().filter(func(id: StringName) -> bool: return not units[id].is_evolution)
+
+
 static func base_ids_sorted() -> Array[StringName]:
 	ensure_loaded()
 	var ids: Array[StringName] = []

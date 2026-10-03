@@ -15,7 +15,7 @@ func _initialize() -> void:
 
 
 func _random_setup(rng: RandomNumberGenerator) -> Dictionary:
-	var all := GameDB.unit_ids_sorted()
+	var all := GameDB.card_ids_sorted()
 	var bases := GameDB.base_ids_sorted()
 	var decks := []
 	var base_ids: Array[StringName] = []
@@ -88,7 +88,7 @@ func _report(n: int, seed_value: int) -> void:
 		if base_games.get(b, 0) > 0:
 			print("  %-20s %5.1f%% wygranych" % [GameDB.base(b).display_name, 100.0 * base_wins[b] / base_games[b]])
 	print("Jednostki (winrate gdy w decku):")
-	for id in GameDB.unit_ids_sorted():
+	for id in GameDB.card_ids_sorted():
 		if unit_games.get(id, 0) > 0:
 			var u := GameDB.unit(id)
 			print("  %-14s %-6s %5.1f%%" % [u.display_name, u.faction, 100.0 * unit_wins[id] / unit_games[id]])
