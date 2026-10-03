@@ -1,70 +1,77 @@
 extends Control
-## M0 placeholder: title screen with two squads marching at each other.
-## Proves the build pipeline (web + Android) end to end.
+## Main menu (prototype): pick a faction, play against the bot.
 
-const HUMAN_COLOR := Color("4a90d9")
-const ORK_COLOR := Color("6abf4b")
-const MARCH_SPEED := 60.0
+const DECKS := {
+	&"humans": [&"bastion", &"szturmowiec", &"strzelec", &"lancer", &"medyk"],
+	&"orks": [&"pancerniak", &"szaleniec", &"siekacz", &"rakieciarz", &"lotniak"],
+}
+const BASES := {&"humans": &"citadel", &"orks": &"war_camp"}
 
-var _humans: Array[Vector2] = []
-var _orks: Array[Vector2] = []
+var _menu: VBoxContainer
+var _match: MatchScreen
 
 
 func _ready() -> void:
+	GameDB.ensure_loaded()
+	var t := Theme.new()
+	t.default_font_size = 24
+	theme = t
+	var bg := ColorRect.new()
+	bg.color = Color("16181e")
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(bg)
+
+	_menu = VBoxContainer.new()
+	_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_menu.offset_left = 80
+	_menu.offset_right = -80
+	_menu.alignment = BoxContainer.ALIGNMENT_CENTER
+	_menu.add_theme_constant_override("separation", 24)
+	add_child(_menu)
+
 	var title := Label.new()
 	title.text = "EMPEROR'S GAMBIT"
-	title.add_theme_font_size_override("font_size", 56)
+	title.add_theme_font_size_override("font_size", 52)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_stretch_horizontally(title, 160.0, false)
-	add_child(title)
-
+	_menu.add_child(title)
+	var sub := Label.new()
+	sub.text = "Prototyp: mecz z botem\nWybierz frakcję"
+	sub.modulate = Color(1, 1, 1, 0.6)
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_menu.add_child(sub)
+	_menu.add_child(_faction_button(&"humans", "Graj: Ludzie"))
+	_menu.add_child(_faction_button(&"orks", "Graj: Orkowie"))
 	var version := Label.new()
-	version.text = "v%s - prototyp" % ProjectSettings.get_setting("application/config/version")
-	version.modulate = Color(1, 1, 1, 0.5)
+	version.text = "v%s" % ProjectSettings.get_setting("application/config/version")
+	version.modulate = Color(1, 1, 1, 0.4)
 	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_stretch_horizontally(version, -60.0, true)
-	add_child(version)
-	resized.connect(_reset_squads)
-	_reset_squads()
+	_menu.add_child(version)
 
 
-func _stretch_horizontally(label: Label, offset_y: float, from_bottom: bool) -> void:
-	label.anchor_left = 0.0
-	label.anchor_right = 1.0
-	label.anchor_top = 1.0 if from_bottom else 0.0
-	label.anchor_bottom = label.anchor_top
-	label.offset_left = 0.0
-	label.offset_right = 0.0
-	label.offset_top = offset_y
-	label.offset_bottom = offset_y
+func _faction_button(faction: StringName, text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.custom_minimum_size.y = 90
+	var style := StyleBoxFlat.new()
+	style.bg_color = GameDB.faction(faction).color.darkened(0.4)
+	style.set_corner_radius_all(12)
+	for s in ["normal", "hover", "pressed", "focus"]:
+		b.add_theme_stylebox_override(s, style)
+	b.pressed.connect(_start.bind(faction))
+	return b
 
 
-func _reset_squads() -> void:
-	var w := size.x
-	var h := size.y
-	_humans.clear()
-	_orks.clear()
-	# Humans: few, big. Orks: many, small.
-	for i in 3:
-		_humans.append(Vector2(w * (0.3 + 0.2 * i), h * 0.85))
-	for i in 10:
-		_orks.append(Vector2(w * (0.15 + 0.075 * i), h * 0.3 + (i % 2) * 30.0))
+func _start(faction: StringName) -> void:
+	var enemy: StringName = &"orks" if faction == &"humans" else &"humans"
+	_match = MatchScreen.new()
+	var bases: Array[StringName] = [BASES[faction], BASES[enemy]]
+	_match.setup([DECKS[faction], DECKS[enemy]], bases, randi())
+	_match.exit_requested.connect(_back_to_menu)
+	_menu.visible = false
+	add_child(_match)
 
 
-func _process(delta: float) -> void:
-	for i in _humans.size():
-		_humans[i].y -= MARCH_SPEED * delta
-	for i in _orks.size():
-		_orks[i].y += MARCH_SPEED * 1.3 * delta
-	if _humans[0].y - _orks[0].y < 40.0:
-		_reset_squads()
-	queue_redraw()
-
-
-func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color("1b1d24"))
-	draw_line(Vector2(0, size.y * 0.55), Vector2(size.x, size.y * 0.55), Color(1, 1, 1, 0.08), 2.0)
-	for p in _humans:
-		draw_rect(Rect2(p - Vector2(22, 22), Vector2(44, 44)), HUMAN_COLOR)
-	for p in _orks:
-		draw_circle(p, 13.0, ORK_COLOR)
+func _back_to_menu() -> void:
+	_match.queue_free()
+	_match = null
+	_menu.visible = true

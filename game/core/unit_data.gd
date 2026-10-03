@@ -22,6 +22,8 @@ enum Role { HEAVY, LIGHT, RAPID, SLOW, FLYER, SUPPORT }
 @export var speed: int = 50
 @export var armor_pierce: bool = false
 @export var splash_radius: int = 0
+## Body radius in px: used for spacing in battle and for drawing.
+@export var size: int = 10
 
 
 func is_flying() -> bool:

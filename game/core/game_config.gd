@@ -12,6 +12,8 @@ enum DrawMode { ALWAYS_WINNER, DRAW_SUDDEN_DEATH }
 @export var draw_mode: DrawMode = DrawMode.ALWAYS_WINNER
 ## DRAW_SUDDEN_DEATH only: after this many rounds higher HP wins, equal HP -> sudden death.
 @export var max_rounds: int = 5
+## Seconds per draft move before the first option is picked automatically.
+@export var move_time_seconds: float = 10.0
 
 @export_group("Favor")
 @export var favor_max: int = 100
@@ -40,7 +42,7 @@ enum DrawMode { ALWAYS_WINNER, DRAW_SUDDEN_DEATH }
 @export var ticks_per_second: int = 20
 @export var battle_max_seconds: float = 20.0
 @export var arena_width: int = 720
-@export var arena_height: int = 900
+@export var arena_height: int = 880
 ## Distance of each row from the center line, px: melee, ranged, special.
 @export var row_distance: Array[int] = [70, 170, 270]
 @export var row_line_spacing: int = 32

@@ -94,6 +94,7 @@ func step() -> void:
 	for u in units:
 		if u.alive:
 			_act(u, hits)
+	_separate()
 	for u in units:
 		u.x = u.next_x
 		u.y = u.next_y
@@ -258,6 +259,37 @@ func _damage_after_armor(u: SimUnit, t: SimUnit) -> int:
 	if u.data.armor_pierce:
 		return dmg
 	return maxi(dmg - t.armor, maxi(1, dmg / 5))
+
+
+## Pushes overlapping allies apart (same layer only: flyers pass over ground units).
+## Reads current positions, writes next positions, so unit order does not matter.
+func _separate() -> void:
+	var n := units.size()
+	for i in n:
+		var a := units[i]
+		if not a.alive:
+			continue
+		for j in range(i + 1, n):
+			var b := units[j]
+			if not b.alive or b.owner != a.owner or b.data.is_flying() != a.data.is_flying():
+				continue
+			var min_d := (a.data.size + b.data.size) * SCALE
+			var dx := b.x - a.x
+			var dy := b.y - a.y
+			var d2 := dx * dx + dy * dy
+			if d2 >= min_d * min_d:
+				continue
+			var d := int(sqrt(float(d2)))
+			if d == 0:
+				# Same spot: split sideways, direction fixed by uid order.
+				dx = SCALE
+				dy = 0
+				d = SCALE
+			var push := (min_d - d) / 2
+			a.next_x -= dx * push / d
+			a.next_y -= dy * push / d
+			b.next_x += dx * push / d
+			b.next_y += dy * push / d
 
 
 # --- buffs -------------------------------------------------------------------

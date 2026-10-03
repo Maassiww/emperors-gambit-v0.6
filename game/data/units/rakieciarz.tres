@@ -18,3 +18,4 @@ attack_range = 260
 speed = 40
 armor_pierce = false
 splash_radius = 50
+size = 9
