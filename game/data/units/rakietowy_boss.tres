@@ -1,6 +1,22 @@
 [gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Rozrzut"
+radius = 15
+threshold_pct = 15
+kind = 21
+
+[sub_resource type="Resource" id="trait_1"]
+script = ExtResource("2")
+label = "Ogień"
+radius = 35
+duration = 2.0
+power = 6
+kind = 22
 
 [resource]
 script = ExtResource("1")
@@ -18,5 +34,6 @@ attack_range = 340
 speed = 0
 splash_radius = 50
 size = 11
-blurb = "Artyleria obszarowa. Stoi w miejscu."
+traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
+blurb = "Artyleria z rozrzutem: zostawia płonącą ziemię, czasem rani swoich (15%). Stoi w miejscu."
 is_evolution = true

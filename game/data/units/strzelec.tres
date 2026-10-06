@@ -1,6 +1,21 @@
 [gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Ogień zaporowy"
+power = 10
+duration = 1.0
+threshold_pct = 30
+kind = 11
+
+[sub_resource type="Resource" id="trait_1"]
+script = ExtResource("2")
+label = "Skrzydło"
+delay = 2.0
+kind = 12
 
 [resource]
 script = ExtResource("1")
@@ -17,5 +32,6 @@ attack_interval = 0.25
 attack_range = 220
 speed = 60
 size = 13
-blurb = "Szybki ostrzał. Słaby na pancerz."
+traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
+blurb = "Ogień zaporowy: trafienia spowalniają (do 30%). Na starcie rozchodzi się na skrzydła."
 evolves_to = &"strzelec_weteran"

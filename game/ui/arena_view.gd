@@ -74,7 +74,7 @@ func after_step() -> void:
 				_effects.append({"type": "teleport", "from": from, "to": to, "t": 0.4})
 			"pulse":
 				_effects.append({"type": "ring", "pos": Vector2(e.pos) / BattleSim.SCALE, "r": float(e.r), "color": PSI, "t": 0.5, "len": 0.5})
-			"explode", "blast":
+			"explode", "blast", "shell":
 				_effects.append({"type": "boom", "pos": Vector2(e.pos) / BattleSim.SCALE, "r": float(e.r), "t": 0.45})
 			"build":
 				_effects.append({"type": "ring", "pos": _pos(sim.units[e.dst]), "r": 18.0, "color": Color(1.0, 0.85, 0.3), "t": 0.4, "len": 0.4})
@@ -187,6 +187,10 @@ func _draw_unit_labels(u: BattleSim.SimUnit) -> void:
 	var p := _pos(u)
 	var s := float(u.data.size)
 	var y := p.y - s - 10
+	if u.hp <= 0:
+		# Last breath: no text (whole hordes do it at once), just a pulsing red outline.
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 60.0)
+		draw_arc(p, s + 4.0, 0, TAU, 20, Color(1, 0.25, 0.2, 0.5 + 0.4 * pulse), 2.0)
 	for effect in STATUS_NAMES:
 		if not sim.has_status(u, effect):
 			continue

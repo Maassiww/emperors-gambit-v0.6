@@ -9,6 +9,13 @@ label = "Prowokacja"
 radius = 85
 kind = 0
 
+[sub_resource type="Resource" id="trait_1"]
+script = ExtResource("2")
+label = "Mur tarcz"
+radius = 90
+power = 35
+kind = 9
+
 [resource]
 script = ExtResource("1")
 id = &"bastion_pretorianin"
@@ -24,6 +31,6 @@ attack_interval = 1.0
 attack_range = 30
 speed = 35
 size = 15
-traits = Array[ExtResource("2")]([SubResource("trait_0")])
-blurb = "Tank. Prowokacja: wrogowie obok muszą bić jego."
+traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
+blurb = "Tank. Prowokacja: wrogowie obok muszą bić jego. Mur tarcz: obok innego Bastionu −20% obrażeń od strzałów."
 is_evolution = true

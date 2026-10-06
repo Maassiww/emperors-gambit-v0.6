@@ -1,6 +1,27 @@
 [gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Maź"
+delay = 2.0
+period = 5.0
+radius = 40
+duration = 3.0
+slow_pct = 15
+stacks = 1
+kind = 14
+
+[sub_resource type="Resource" id="trait_1"]
+script = ExtResource("2")
+label = "Maź"
+radius = 60
+duration = 4.0
+slow_pct = 30
+stacks = 1
+kind = 15
 
 [resource]
 script = ExtResource("1")
@@ -17,5 +38,6 @@ attack_interval = 1.1
 attack_range = 30
 speed = 35
 size = 11
-blurb = "Tank w złomowym pancerzu."
+traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
+blurb = "Tank. Maź: co 5 s kałuża pod nogami (spowolnienie, korozja). Po śmierci duża kałuża."
 evolves_to = &"megapancerniak"

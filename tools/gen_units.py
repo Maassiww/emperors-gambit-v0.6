@@ -10,7 +10,10 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "game", "data", "units")
 
 MELEE, RANGED, SPECIAL = 0, 1, 2
 HEAVY, LIGHT, RAPID, SLOW, FLYER, SUPPORT, SPEC = range(7)
-K = dict(TAUNT=0, TELEPORT_BACKLINE=1, EXECUTE=2, STUN_PULSE=3, AURA=4, BUILD=5, KAMIKAZE=6, DEATH_BLAST=7, MARK_ON_HIT=8)
+KINDS = ["TAUNT", "TELEPORT_BACKLINE", "EXECUTE", "STUN_PULSE", "AURA", "BUILD", "KAMIKAZE", "DEATH_BLAST", "MARK_ON_HIT",
+         "SHIELD_WALL", "LEAP", "SLOW_ON_HIT", "FLANK", "SNIPER", "ZONE_DROP", "DEATH_ZONE", "SKIP_HEAVY", "LAST_BREATH",
+         "FRENZY_ON_KILL", "RANDOM_TARGET", "CROWD", "SCATTER", "ZONE_ON_HIT", "MULTI_HEAL"]  # = TraitData.Kind order
+K = {k: i for i, k in enumerate(KINDS)}
 ALL, FACTION, MELEE_ONLY = 0, 1, 2
 
 
@@ -42,23 +45,40 @@ def add(d):
 
 # --- Humans: few units per card, strong stats ----------------------------------------------
 b = add(unit("bastion", "Bastion", "humans", MELEE, HEAVY, 1, 490, 8, 22, 1.0, 30, 35, 13,
-             blurb="Tank. Prowokacja: wrogowie obok muszą bić jego.",
-             traits=[tr("TAUNT", label="Prowokacja", radius=60)], evolves_to="bastion_pretorianin"))
+             blurb="Tank. Prowokacja: wrogowie obok muszą bić jego. Mur tarcz: obok innego Bastionu −20% obrażeń od strzałów.",
+             traits=[tr("TAUNT", label="Prowokacja", radius=75),
+                     tr("SHIELD_WALL", label="Mur tarcz", radius=70, power=20)], evolves_to="bastion_pretorianin"))
 add(evo(b, "bastion_pretorianin", "Pretorianin", hp=785, armor=10, damage=33, size=15,
-        traits=[tr("TAUNT", label="Prowokacja", radius=85)]))
+        traits=[tr("TAUNT", label="Prowokacja", radius=85),
+                tr("SHIELD_WALL", label="Mur tarcz", radius=90, power=35)]))
 b = add(unit("szturmowiec", "Szturmowiec", "humans", MELEE, LIGHT, 2, 140, 3, 44, 0.8, 30, 90, 13,
-             blurb="Szybki DPS w zwarciu.", evolves_to="szturmowiec_elity"))
-add(evo(b, "szturmowiec_elity", "Szturmowiec Elity", hp=210, armor=4, damage=68, size=15))
+             blurb="Desant: na starcie skacze na front wroga i ogłusza na 1 s. Dobija rannych (<30% HP).",
+             traits=[tr("LEAP", label="Desant", delay=0.5, cast_range=420, radius=35, duration=1.0, max_count=1),
+                     tr("EXECUTE", label="Egzekucja", power=50, threshold_pct=30)],
+             evolves_to="szturmowiec_elity"))
+add(evo(b, "szturmowiec_elity", "Szturmowiec Elity", hp=210, armor=4, damage=68, size=15,
+        traits=[tr("LEAP", label="Desant", delay=0.5, period=6.0, cast_range=420, radius=40, duration=1.0, max_count=2),
+                tr("EXECUTE", label="Egzekucja", power=50, threshold_pct=30)]))
 b = add(unit("strzelec", "Strzelec", "humans", RANGED, RAPID, 2, 140, 3, 8, 0.25, 220, 60, 13,
-             blurb="Szybki ostrzał. Słaby na pancerz.", evolves_to="strzelec_weteran"))
-add(evo(b, "strzelec_weteran", "Strzelec Weteran", hp=210, armor=4, damage=13, size=15))
+             blurb="Ogień zaporowy: trafienia spowalniają (do 30%). Na starcie rozchodzi się na skrzydła.",
+             traits=[tr("SLOW_ON_HIT", label="Ogień zaporowy", power=10, duration=1.0, threshold_pct=30),
+                     tr("FLANK", label="Skrzydło", delay=2.0)],
+             evolves_to="strzelec_weteran"))
+add(evo(b, "strzelec_weteran", "Strzelec Weteran", hp=210, armor=4, damage=13, size=15,
+        traits=[tr("SLOW_ON_HIT", label="Ogień zaporowy", power=15, duration=1.0, threshold_pct=40),
+                tr("FLANK", label="Skrzydło", delay=2.0)]))
 b = add(unit("lancer", "Lancer", "humans", RANGED, SLOW, 1, 160, 3, 110, 2.0, 360, 0, 13, armor_pierce=True,
-             blurb="Snajper. Stoi w miejscu, przebija pancerz.", evolves_to="lancer_ciezki"))
-add(evo(b, "lancer_ciezki", "Ciężki Lancer", hp=256, armor=4, damage=165, size=15))
+             blurb="Snajper: celuje w najcenniejszy cel (ewolucje, tanki). Pocisk przebija pancerz i linię za celem.",
+             traits=[tr("SNIPER", label="Snajper", cast_range=120, radius=15, power=50)],
+             evolves_to="lancer_ciezki"))
+add(evo(b, "lancer_ciezki", "Ciężki Lancer", hp=256, armor=4, damage=165, size=15,
+        traits=[tr("SNIPER", label="Snajper", cast_range=120, radius=15, power=50),
+                tr("MARK_ON_HIT", label="Oznaczenie", power=20, duration=4.0)]))
 b = add(unit("medyk", "Medyk polowy", "humans", SPECIAL, SUPPORT, 1, 180, 2, 25, 1.0, 160, 45, 13, glyph="+",
              blurb="Leczy najbardziej rannego sojusznika.", evolves_to="archimedyk"))
-add(evo(b, "archimedyk", "Archimedyk", hp=288, armor=3, damage=43, size=15))
-b = add(unit("zabojca", "Zabójca", "humans", SPECIAL, SPEC, 2, 250, 4, 40, 0.7, 28, 95, 12, glyph="Z",
+add(evo(b, "archimedyk", "Archimedyk", hp=288, armor=3, damage=43, size=15,
+        traits=[tr("MULTI_HEAL", label="Leczy dwóch", max_count=2)]))
+b = add(unit("zabojca", "Zabójca", "humans", SPECIAL, SPEC, 2, 290, 4, 40, 0.7, 28, 95, 12, glyph="Z",
              targets_backline=True, power_bonus=1.3,
              blurb="Po 2 s skacze za tyły wroga i poluje na ostatnią linię. Dobija rannych.",
              traits=[tr("TELEPORT_BACKLINE", label="Skok", delay=2.0),
@@ -84,18 +104,37 @@ add(evo(b, "chorazy_gwardii", "Chorąży Gwardii", hp=450, armor=5, damage=30, s
 
 # --- Orks: many units per card, weak stats ---------------------------------------------------
 b = add(unit("pancerniak", "Pancerniak", "orks", MELEE, HEAVY, 2, 300, 6, 16, 1.1, 30, 35, 11,
-             blurb="Tank w złomowym pancerzu.", evolves_to="megapancerniak"))
-add(evo(b, "megapancerniak", "Megapancerniak", hp=480, armor=8, damage=24, size=13))
-b = add(unit("szaleniec", "Szaleniec", "orks", MELEE, LIGHT, 5, 80, 0, 22, 0.6, 25, 100, 9,
-             blurb="Tania, szybka masa do zwarcia.", evolves_to="berserker"))
-add(evo(b, "berserker", "Berserker", hp=120, damage=33, size=11))
+             blurb="Tank. Maź: co 5 s kałuża pod nogami (spowolnienie, korozja). Po śmierci duża kałuża.",
+             traits=[tr("ZONE_DROP", label="Maź", delay=2.0, period=5.0, radius=40, duration=3.0, slow_pct=15, stacks=1),
+                     tr("DEATH_ZONE", label="Maź", radius=60, duration=4.0, slow_pct=30, stacks=1)],
+             evolves_to="megapancerniak"))
+add(evo(b, "megapancerniak", "Megapancerniak", hp=480, armor=8, damage=24, size=13,
+        traits=[tr("ZONE_DROP", label="Maź", delay=1.5, period=3.0, radius=50, duration=3.0, slow_pct=25, stacks=1),
+                tr("DEATH_ZONE", label="Maź", radius=75, duration=5.0, slow_pct=35, stacks=1)]))
+b = add(unit("szaleniec", "Szaleniec", "orks", MELEE, LIGHT, 5, 70, 0, 18, 0.6, 25, 100, 9,
+             blurb="Przez szereg: omija ciężkie melee (chyba że prowokują). Ostatni oddech: walczy jeszcze chwilę po śmierci.",
+             traits=[tr("SKIP_HEAVY", label="Przez szereg"), tr("LAST_BREATH", label="Ostatni oddech", duration=0.6)],
+             evolves_to="berserker"))
+add(evo(b, "berserker", "Berserker", hp=120, damage=33, size=11,
+        traits=[tr("SKIP_HEAVY", label="Przez szereg"), tr("LAST_BREATH", label="Ostatni oddech", duration=0.6),
+                tr("FRENZY_ON_KILL", label="Szał", power=10, stacks=5)]))
 b = add(unit("siekacz", "Siekacz", "orks", RANGED, RAPID, 4, 66, 0, 5, 0.3, 190, 60, 9,
-             blurb="Masa szybkiego ostrzału.", evolves_to="megasiekacz"))
-add(evo(b, "megasiekacz", "Megasiekacz", hp=105, damage=8, size=11))
+             blurb="Na oślep: strzela w losowy cel w zasięgu. Tłum: +5% szybkości ataku za Siekacza obok (maks. 30%).",
+             traits=[tr("RANDOM_TARGET", label="Na oślep"),
+                     tr("CROWD", label="Tłum", radius=40, power=5, threshold_pct=30)],
+             evolves_to="megasiekacz"))
+add(evo(b, "megasiekacz", "Megasiekacz", hp=105, damage=8, size=11,
+        traits=[tr("RANDOM_TARGET", label="Na oślep"),
+                tr("CROWD", label="Tłum", radius=40, power=10, threshold_pct=60)]))
 b = add(unit("rakieciarz", "Rakieciarz", "orks", RANGED, SLOW, 2, 70, 1, 55, 2.2, 340, 0, 9, splash_radius=50,
-             blurb="Artyleria obszarowa. Stoi w miejscu.", evolves_to="rakietowy_boss"))
-add(evo(b, "rakietowy_boss", "Rakietowy Boss", hp=112, armor=2, damage=82, size=11))
-b = add(unit("lotniak", "Lotniak", "orks", SPECIAL, FLYER, 3, 80, 1, 16, 0.8, 30, 110, 9, glyph="L",
+             blurb="Artyleria z rozrzutem: zostawia płonącą ziemię, czasem rani swoich (15%). Stoi w miejscu.",
+             traits=[tr("SCATTER", label="Rozrzut", radius=30, threshold_pct=15),
+                     tr("ZONE_ON_HIT", label="Ogień", radius=30, duration=2.0, power=4)],
+             evolves_to="rakietowy_boss"))
+add(evo(b, "rakietowy_boss", "Rakietowy Boss", hp=112, armor=2, damage=82, size=11,
+        traits=[tr("SCATTER", label="Rozrzut", radius=15, threshold_pct=15),
+                tr("ZONE_ON_HIT", label="Ogień", radius=35, duration=2.0, power=6)]))
+b = add(unit("lotniak", "Lotniak", "orks", SPECIAL, FLYER, 3, 72, 1, 16, 0.8, 30, 110, 9, glyph="L",
              targets_backline=True, blurb="Lata nad frontem, poluje na tyły. Wybucha po śmierci.",
              traits=[tr("DEATH_BLAST", label="Wybuch", radius=45, power=30)], evolves_to="as_lotniak"))
 add(evo(b, "as_lotniak", "As Lotników", hp=120, armor=2, damage=26, size=11,

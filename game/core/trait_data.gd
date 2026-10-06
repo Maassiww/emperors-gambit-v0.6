@@ -14,6 +14,23 @@ enum Kind {
 	KAMIKAZE,           ## runs into the densest enemy group and explodes: power damage + stacks of corrosion in radius
 	DEATH_BLAST,        ## on death: power damage to enemies within radius
 	MARK_ON_HIT,        ## every hit marks the target: it takes +power% damage for duration
+	SHIELD_WALL,        ## with another SHIELD_WALL ally within radius: -power% damage from ranged units
+	LEAP,               ## after delay (then every period, max_count times): jumps next to the nearest ground enemy
+	                    ## within cast_range and stuns enemies within radius of the landing for duration
+	SLOW_ON_HIT,        ## every hit slows the target by power% for duration, this trait pushes it to threshold_pct at most
+	FLANK,              ## for the first delay seconds walks out to the nearer flank instead of attacking
+	SNIPER,             ## targets the most valuable enemy in range (evolutions > heavy > rest); the shot pierces:
+	                    ## enemies within radius of the line up to cast_range behind the target take power% damage
+	ZONE_DROP,          ## every period (first after delay): leaves a zone at its feet (radius, duration, power, stacks, slow_pct)
+	DEATH_ZONE,         ## on death: leaves a zone (same fields as ZONE_DROP)
+	SKIP_HEAVY,         ## ignores heavy melee when choosing a target (Taunt still applies)
+	LAST_BREATH,        ## at 0 HP keeps fighting for duration, cannot be targeted or healed, then dies
+	FRENZY_ON_KILL,     ## each kill: +power% attack speed, at most stacks kills count
+	RANDOM_TARGET,      ## picks a random enemy in range for every shot (nearest when none is in range)
+	CROWD,              ## +power% attack speed per ally with CROWD within radius, at most threshold_pct
+	SCATTER,            ## shots land up to radius px off target; splash hits own units for threshold_pct% damage
+	ZONE_ON_HIT,        ## every shot leaves a zone at the impact point (radius, duration, power, stacks, slow_pct)
+	MULTI_HEAL,         ## heals max_count patients per cast
 }
 
 ## AURA targets.

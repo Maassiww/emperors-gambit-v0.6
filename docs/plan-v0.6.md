@@ -30,6 +30,7 @@ Każda jednostka ma czytelną cechę, a trzy sposoby grania są realne i zbalans
 
 - Karta bezfrakcyjna obniża czystość decku (liczy się jak obca).
 - Aura Chorążego nazywa się „Chorągiew” (umiejętność Cytadeli zostaje „Sztandar”).
+- Melee nie atakuje latających – to zamierzona przewaga latających; ich kontrą jest range (także przy balansie).
 
 ## Etapy
 
@@ -53,7 +54,16 @@ wrogom na ziemi w promieniu; latający odporni; maks. `max_zones_per_side` = 6 (
 - UI: plamy stref w kolorze frakcji, łączone jak obrysy aur; napis + pasek czasu dla Spowolnienia.
 - Testy obu mechanik i ich limitów.
 
-### 3. Cechy jednostek (wszystkie naraz)
+### 3. Cechy jednostek (wszystkie naraz) – ✅ zrobione 2026-10-06
+Wynik (1400 meczów): karty 43–57%, wyjątek Lotniak 62% (przewaga latających zamierzona; strojenie w etapie 6).
+Typy decków: czysta 55%, czysta+N 43%, mix 52%, mix+N 52%. Walka średnio 11,4 s (było 9,5), 4,1 rundy, dogrywki 1–2%.
+Korekty po seriach:
+- Szaleniec 68% → 57%: 70 HP, 18 obr., Ostatni oddech 0,6 s.
+- Bastion: Prowokacja 75. Maź co 5 s, 15%.
+- Mur tarcz działa tylko na jednostki range. Wcześniej osłabiał też speciale walczące wręcz.
+- Bomba i Zabójca po skoku ignorują Prowokację (Bombowiec 36% → 50%). Zabójca ma 290 HP (było 32% → 43%).
+- Lotniak ma 72 HP.
+Rakieciarz: strefa ognia 4 obr./0,5 s; trafienia w swoich 15%. Strzelec spowalnia maks. do 30% (Weteran 40%).
 
 | Jednostka | Cecha | Styl | Ewolucja |
 |---|---|---|---|

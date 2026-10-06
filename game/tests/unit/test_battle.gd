@@ -108,6 +108,6 @@ func test_formation_order_front_to_back() -> void:
 
 
 func test_regular_units_target_nearest() -> void:
-	var sim := _sim({&"szaleniec": 1}, {&"bastion": 1, &"strzelec": 1})
-	var szaleniec := sim.units[0]
-	assert_eq(sim.units[sim._pick_enemy(szaleniec)].data.id, &"bastion", "light melee skipped the front")
+	var sim := _sim({&"szturmowiec": 1}, {&"bastion": 1, &"strzelec": 1})
+	var szturmowiec := sim.units[0]
+	assert_eq(sim.units[sim._pick_enemy(szturmowiec)].data.id, &"bastion", "light melee skipped the front")

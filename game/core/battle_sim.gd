@@ -65,6 +65,15 @@ class SimUnit:
 	var buff_armor := 0
 	var teleported := false
 	var exploded := false
+	## Recomputed every tick: Shield wall damage reduction and Crowd attack speed (%).
+	var wall_pct := 0
+	var crowd_pct := 0
+	var kills := 0
+	var leaps := 0
+	## Last breath: tick at which the unit (already at 0 HP) finally dies; 0 = not dying.
+	var breath_until := 0
+	## Flank: x the unit walks out to before fighting.
+	var flank_x := 0
 	var summoner := -1
 	## Cached data flags (hot loops).
 	var flying := false
@@ -268,6 +277,10 @@ func _add_unit(owner: int, data: UnitData, x: int, y: int) -> SimUnit:
 		if t.active_for(_factions[owner]):
 			u.traits.append(t)
 			u.timers.append(_seconds_to_ticks(t.delay))
+	if u.get_trait(TraitData.Kind.FLANK) != null:
+		var w := _cfg.arena_width * SCALE
+		var left := x < w / 2 or (x == w / 2 and u.uid % 2 == 0)
+		u.flank_x = w * 15 / 100 if left else w * 85 / 100
 	units.append(u)
 	return u
 
@@ -282,14 +295,32 @@ func _prepare_tick() -> void:
 		u.buff_attack_speed = 0
 		u.buff_move = 0
 		u.buff_armor = 0
+		u.wall_pct = 0
+		u.crowd_pct = 0
 	for s in units:
 		if not s.alive:
 			continue
 		for t in s.traits:
-			if t.kind == TraitData.Kind.TAUNT:
-				_taunters.append(s)
-			elif t.kind == TraitData.Kind.AURA:
-				_apply_aura(s, t)
+			match t.kind:
+				TraitData.Kind.TAUNT:
+					_taunters.append(s)
+				TraitData.Kind.AURA:
+					_apply_aura(s, t)
+				TraitData.Kind.SHIELD_WALL:
+					if _allies_with(s, t.kind, t.radius) > 0:
+						s.wall_pct = t.power
+				TraitData.Kind.CROWD:
+					s.crowd_pct = mini(t.threshold_pct, _allies_with(s, t.kind, t.radius) * t.power)
+
+
+## Alive allies of u (not u) within radius px that have a trait of this kind.
+func _allies_with(u: SimUnit, kind: TraitData.Kind, radius: int) -> int:
+	var r := radius * SCALE
+	var n := 0
+	for a in units:
+		if a.alive and a.owner == u.owner and a.uid != u.uid and _dist_sq(u, a) <= r * r and a.get_trait(kind) != null:
+			n += 1
+	return n
 
 
 func _apply_aura(s: SimUnit, t: TraitData) -> void:
@@ -341,15 +372,86 @@ func _act(u: SimUnit, hits: Array[Array]) -> void:
 		_move_towards(u, t)
 	elif u.cooldown == 0:
 		u.cooldown = _effective_interval(u)
-		hits.append([u.uid, t.uid, _damage(u, t, u.damage)])
-		var mark := u.get_trait(TraitData.Kind.MARK_ON_HIT)
-		if mark != null:
-			_pending_status.append([t.uid, Effect.MARK, mark.power, _seconds_to_ticks(mark.duration)])
-		if u.data.splash_radius > 0:
-			var r := u.data.splash_radius * SCALE
-			for e in units:
-				if e.alive and e.owner != u.owner and e.uid != t.uid and not e.data.is_flying() and _dist_sq(t, e) <= r * r:
-					hits.append([u.uid, e.uid, _damage(u, e, u.damage) / 2, true])
+		_fire(u, t, hits)
+
+
+func _fire(u: SimUnit, t: SimUnit, hits: Array[Array]) -> void:
+	var scatter := u.get_trait(TraitData.Kind.SCATTER)
+	if scatter != null:
+		_fire_scattered(u, t, scatter, hits)
+		return
+	hits.append([u.uid, t.uid, _damage(u, t, u.damage)])
+	_on_hit_effects(u, t)
+	if u.get_trait(TraitData.Kind.RANDOM_TARGET) != null:
+		u.retarget_in = 0
+	var sniper := u.get_trait(TraitData.Kind.SNIPER)
+	if sniper != null and sniper.cast_range > 0:
+		_pierce(u, t, sniper, hits)
+	if u.data.splash_radius > 0:
+		var r := u.data.splash_radius * SCALE
+		for e in units:
+			if e.alive and e.owner != u.owner and e.uid != t.uid and not e.flying and _dist_sq(t, e) <= r * r:
+				hits.append([u.uid, e.uid, _damage(u, e, u.damage) / 2, true])
+
+
+func _on_hit_effects(u: SimUnit, t: SimUnit) -> void:
+	var mark := u.get_trait(TraitData.Kind.MARK_ON_HIT)
+	if mark != null:
+		_pending_status.append([t.uid, Effect.MARK, mark.power, _seconds_to_ticks(mark.duration)])
+	var slow := u.get_trait(TraitData.Kind.SLOW_ON_HIT)
+	if slow != null:
+		_pending_status.append([t.uid, Effect.SLOW, slow.power, _seconds_to_ticks(slow.duration), slow.threshold_pct])
+
+
+## Shell lands up to scatter.radius px off target. Enemies near the impact take full damage,
+## farther ones in the splash half; own ground units in the splash take scatter.threshold_pct% of it.
+func _fire_scattered(u: SimUnit, t: SimUnit, scatter: TraitData, hits: Array[Array]) -> void:
+	var off := scatter.radius * SCALE
+	var ix := t.x + _rng.randi_range(-off, off)
+	var iy := t.y + _rng.randi_range(-off, off)
+	var r := maxi(1, u.data.splash_radius) * SCALE
+	for e in units:
+		if not e.alive or e.flying or e.uid == u.uid:
+			continue
+		var dx := e.x - ix
+		var dy := e.y - iy
+		var d := dx * dx + dy * dy
+		if d > r * r:
+			continue
+		var dmg := _damage(u, e, u.damage)
+		if d * 4 > r * r:
+			dmg /= 2
+		if e.owner == u.owner:
+			dmg = dmg * scatter.threshold_pct / 100
+			if dmg > 0:
+				hits.append([u.uid, e.uid, dmg, true])
+		else:
+			hits.append([u.uid, e.uid, dmg, true])
+			_on_hit_effects(u, e)
+	var zone := u.get_trait(TraitData.Kind.ZONE_ON_HIT)
+	if zone != null:
+		_add_zone(u.owner, ix, iy, zone, u.uid)
+	events.append({"type": "shell", "src": u.uid, "pos": Vector2i(ix, iy), "r": u.data.splash_radius})
+
+
+## Piercing shot: enemies near the line u->t, up to t.cast_range behind t, take t.power% damage.
+func _pierce(u: SimUnit, t: SimUnit, spec: TraitData, hits: Array[Array]) -> void:
+	var dx := t.x - u.x
+	var dy := t.y - u.y
+	var len := int(sqrt(float(dx * dx + dy * dy)))
+	if len == 0:
+		return
+	var reach := spec.cast_range * SCALE
+	var width := spec.radius * SCALE
+	for e in units:
+		if not e.alive or e.owner == u.owner or e.uid == t.uid or e.flying:
+			continue
+		var ex := e.x - t.x
+		var ey := e.y - t.y
+		var along := (ex * dx + ey * dy) / len
+		var across := absi(ex * dy - ey * dx) / len
+		if along > 0 and along <= reach and across <= width:
+			hits.append([u.uid, e.uid, _damage(u, e, u.damage) * spec.power / 100, true])
 
 
 ## Timed traits. Returns true when the trait used up the unit's turn (teleport).
@@ -370,6 +472,25 @@ func _tick_traits(u: SimUnit, hits: Array[Array]) -> bool:
 				if u.timers[i] <= 0:
 					_build(u, t)
 					u.timers[i] = _seconds_to_ticks(t.period)
+			TraitData.Kind.ZONE_DROP:
+				u.timers[i] -= 1
+				if u.timers[i] <= 0:
+					_add_zone(u.owner, u.x, u.y, t, u.uid)
+					u.timers[i] = _seconds_to_ticks(t.period)
+			TraitData.Kind.LEAP:
+				u.timers[i] -= 1
+				if u.leaps < maxi(1, t.max_count) and u.timers[i] <= 0 and _leap(u, t, hits):
+					u.leaps += 1
+					u.timers[i] = _seconds_to_ticks(t.period)
+					return true
+			TraitData.Kind.FLANK:
+				if u.timers[i] > 0:
+					u.timers[i] -= 1
+					var step := u.speed * _speed_pct(u) / 100
+					if absi(u.flank_x - u.x) > step:
+						u.next_x = u.x + signi(u.flank_x - u.x) * step
+						return true
+					u.timers[i] = 0
 	return false
 
 
@@ -385,6 +506,18 @@ func _act_healer(u: SimUnit, hits: Array[Array]) -> void:
 			if p.get_trait(TraitData.Kind.TAUNT) != null:
 				heal = heal * _cfg.taunt_heal_pct / 100
 			hits.append([u.uid, p.uid, -heal])
+			var multi := u.get_trait(TraitData.Kind.MULTI_HEAL)
+			if multi != null:
+				var done: Array[int] = [p.uid]
+				for k in multi.max_count - 1:
+					var extra := _pick_patient(u, done, u.attack_range)
+					if extra < 0:
+						break
+					done.append(extra)
+					var h := u.damage
+					if units[extra].get_trait(TraitData.Kind.TAUNT) != null:
+						h = h * _cfg.taunt_heal_pct / 100
+					hits.append([u.uid, extra, -h])
 		return
 	# Nobody to heal: follow the army, staying at own range from the nearest enemy.
 	var enemy := _pick_enemy(u)
@@ -394,22 +527,67 @@ func _act_healer(u: SimUnit, hits: Array[Array]) -> void:
 
 # --- targeting ---------------------------------------------------------------
 
-## Priority: Taunt > the unit's own trait (bomb: densest group, hunter: backline) > nearest.
+## Priority: committed bomb / hunter > Taunt > the unit's own trait (bomb: densest group,
+## hunter: backline) > nearest.
 func _pick_enemy(u: SimUnit) -> int:
+	# Bombs and teleported hunters commit to their victim until it dies; Taunt cannot pull them off.
+	var sticky := u.get_trait(TraitData.Kind.KAMIKAZE) != null or (u.teleported and u.data.targets_backline)
+	if sticky and u.target >= 0 and units[u.target].alive and units[u.target].owner != u.owner and units[u.target].hp > 0:
+		return u.target
 	var taunter := _taunter_for(u)
 	if taunter >= 0:
 		return taunter
-	# Bombs and teleporting hunters commit to their victim until it dies.
-	var sticky := u.get_trait(TraitData.Kind.KAMIKAZE) != null or (u.teleported and u.data.targets_backline)
-	if sticky and u.target >= 0 and units[u.target].alive and units[u.target].owner != u.owner:
-		return u.target
 	if u.get_trait(TraitData.Kind.KAMIKAZE) != null:
 		return _densest_enemy(u, u.get_trait(TraitData.Kind.KAMIKAZE).radius * SCALE, -1)
 	if u.data.targets_backline:
 		var back := _nearest(u, true)
 		if back >= 0:
 			return back
+	if u.get_trait(TraitData.Kind.SNIPER) != null:
+		var prize := _most_valuable_in_range(u)
+		if prize >= 0:
+			return prize
+	if u.get_trait(TraitData.Kind.RANDOM_TARGET) != null:
+		var pick := _random_in_range(u)
+		if pick >= 0:
+			return pick
+	if u.get_trait(TraitData.Kind.SKIP_HEAVY) != null:
+		var light := _nearest(u, false, true)
+		if light >= 0:
+			return light
 	return _nearest(u, false)
+
+
+## Value: evolution 2, heavy 1, then more max HP, then nearer.
+func _most_valuable_in_range(u: SimUnit) -> int:
+	var best := -1
+	var best_key := -1
+	var best_d := 0
+	var r2 := u.attack_range * u.attack_range
+	for e in units:
+		if not e.alive or e.owner == u.owner or not _can_target(u, e):
+			continue
+		var d := _dist_sq(u, e)
+		if d > r2:
+			continue
+		var key := (2 if e.data.is_evolution else 0) + (1 if e.data.role == UnitData.Role.HEAVY else 0)
+		key = key * 100000 + e.max_hp
+		if key > best_key or (key == best_key and d < best_d):
+			best = e.uid
+			best_key = key
+			best_d = d
+	return best
+
+
+func _random_in_range(u: SimUnit) -> int:
+	var r2 := u.attack_range * u.attack_range
+	var pool: Array[int] = []
+	for e in units:
+		if e.alive and e.owner != u.owner and _can_target(u, e) and _dist_sq(u, e) <= r2:
+			pool.append(e.uid)
+	if pool.is_empty():
+		return -1
+	return pool[_rng.randi_range(0, pool.size() - 1)]
 
 
 ## Nearest enemy taunter that has u inside its taunt radius, or -1.
@@ -428,17 +606,19 @@ func _taunter_for(u: SimUnit) -> int:
 
 
 func _can_target(u: SimUnit, e: SimUnit) -> bool:
-	return not e.flying or u.hits_air
+	return (not e.flying or u.hits_air) and e.hp > 0
 
 
-func _nearest(u: SimUnit, backline_only: bool) -> int:
+func _nearest(u: SimUnit, backline_only: bool, skip_heavy: bool = false) -> int:
 	var best := -1
 	var best_d := 0
 	var air := u.hits_air
 	for e in units:
-		if not e.alive or e.owner == u.owner or (not air and e.flying):
+		if not e.alive or e.owner == u.owner or (not air and e.flying) or e.hp <= 0:
 			continue
 		if backline_only and e.data.unit_class == UnitData.UnitClass.MELEE:
+			continue
+		if skip_heavy and e.data.role == UnitData.Role.HEAVY and e.data.unit_class == UnitData.UnitClass.MELEE:
 			continue
 		var d := _dist_sq(u, e)
 		if best < 0 or d < best_d:
@@ -466,11 +646,14 @@ func _densest_enemy(u: SimUnit, r: int, max_range: int) -> int:
 	return best
 
 
-func _pick_patient(u: SimUnit) -> int:
+## Most injured ally (dying units excluded); skip = uids to leave out, max_range = sim units or -1.
+func _pick_patient(u: SimUnit, skip: Array[int] = [], max_range: int = -1) -> int:
 	var best := -1
 	var best_ratio := 1000
 	for a in units:
-		if not a.alive or a.owner != u.owner or a.hp >= a.max_hp:
+		if not a.alive or a.owner != u.owner or a.hp >= a.max_hp or a.hp <= 0 or a.uid in skip:
+			continue
+		if max_range >= 0 and _dist_sq(u, a) > max_range * max_range:
 			continue
 		var ratio := a.hp * 1000 / a.max_hp
 		if ratio < best_ratio:
@@ -504,6 +687,44 @@ func _teleport(u: SimUnit) -> bool:
 	u.next_x = t.x
 	u.next_y = y
 	u.teleported = true
+	u.target = best
+	u.retarget_in = RETARGET_TICKS
+	return true
+
+
+## Lands next to the nearest ground enemy within cast_range and stuns enemies around the landing.
+func _leap(u: SimUnit, t: TraitData, hits: Array[Array]) -> bool:
+	var best := -1
+	var best_d := 0
+	var reach := t.cast_range * SCALE
+	for e in units:
+		if not e.alive or e.owner == u.owner or e.flying or e.hp <= 0:
+			continue
+		var d := _dist_sq(u, e)
+		if d <= reach * reach and (best < 0 or d < best_d):
+			best = e.uid
+			best_d = d
+	if best < 0:
+		return false
+	var target := units[best]
+	var dist := maxi(1, int(sqrt(float(best_d))))
+	var gap := mini(dist, (u.data.size + target.data.size) * SCALE)
+	var lx := target.x - (target.x - u.x) * gap / dist
+	var ly := target.y - (target.y - u.y) * gap / dist
+	var r := t.radius * SCALE
+	for e in units:
+		if not e.alive or e.owner == u.owner or e.flying:
+			continue
+		var dx := e.x - lx
+		var dy := e.y - ly
+		if dx * dx + dy * dy <= r * r:
+			if t.power > 0:
+				hits.append([u.uid, e.uid, _damage(u, e, t.power), true])
+			_pending_status.append([e.uid, Effect.STUN, 0, _seconds_to_ticks(t.duration)])
+	events.append({"type": "teleport", "src": u.uid, "from": Vector2i(u.x, u.y), "to": Vector2i(lx, ly)})
+	events.append({"type": "pulse", "src": u.uid, "pos": Vector2i(lx, ly), "r": t.radius})
+	u.next_x = lx
+	u.next_y = ly
 	u.target = best
 	u.retarget_in = RETARGET_TICKS
 	return true
@@ -636,6 +857,8 @@ func _damage(u: SimUnit, t: SimUnit, base_damage: int) -> int:
 		dmg = dmg * UnitData.armor_pass_pct(armor_of(t), _cfg) / 100
 	if has_status(t, Effect.MARK):
 		dmg = dmg * (100 + t.statuses[Effect.MARK].power) / 100
+	if t.wall_pct > 0 and u.data.unit_class == UnitData.UnitClass.RANGED:
+		dmg = dmg * (100 - t.wall_pct) / 100
 	return maxi(1, dmg)
 
 
@@ -649,7 +872,10 @@ func _speed_pct(u: SimUnit) -> int:
 
 func _effective_interval(u: SimUnit) -> int:
 	var base := _bases[u.owner]
-	var bonus := u.buff_attack_speed
+	var bonus := u.buff_attack_speed + u.crowd_pct
+	var frenzy := u.get_trait(TraitData.Kind.FRENZY_ON_KILL)
+	if frenzy != null:
+		bonus += mini(u.kills, frenzy.stacks) * frenzy.power
 	if ability_active(u.owner):
 		match base.ability:
 			BaseData.Ability.WAR_DRUMS:
@@ -681,7 +907,7 @@ func _apply_hits(hits: Array[Array]) -> void:
 	while true:
 		var dead: Array[SimUnit] = []
 		for u in units:
-			if u.alive and u.hp <= 0:
+			if u.alive and u.hp <= 0 and not _last_breath(u):
 				u.alive = false
 				events.append({"type": "death", "dst": u.uid})
 				dead.append(u)
@@ -693,24 +919,45 @@ func _apply_hits(hits: Array[Array]) -> void:
 		_deal(extra)
 
 
+## True while a unit at 0 HP still fights on its Last breath (starts it on first call).
+func _last_breath(u: SimUnit) -> bool:
+	if u.exploded:
+		return false
+	if u.breath_until == 0:
+		var t := u.get_trait(TraitData.Kind.LAST_BREATH)
+		if t == null:
+			return false
+		u.breath_until = tick + maxi(1, _seconds_to_ticks(t.duration))
+		events.append({"type": "breath", "dst": u.uid})
+		return true
+	return tick < u.breath_until
+
+
 func _deal(hits: Array[Array]) -> void:
 	for h in hits:
 		var src := units[h[0]]
 		var t := units[h[1]]
 		var amount: int = h[2]
 		if amount < 0:
+			if t.hp <= 0:
+				continue
 			var healed := mini(-amount, t.max_hp - t.hp)
 			t.hp += healed
 			events.append({"type": "heal", "src": src.uid, "dst": t.uid, "amount": healed})
 		elif t.hp > 0:
 			var dealt := mini(amount, t.hp)
 			t.hp -= dealt
+			if t.hp <= 0:
+				src.kills += 1
 			result.damage_dealt[src.owner] += dealt
 			# Area hits (splash, blasts, pulses) are drawn by their own effect, not as shots.
 			events.append({"type": "hit", "src": src.uid, "dst": t.uid, "amount": dealt, "area": h.size() > 3})
 
 
 func _on_death(dead: SimUnit, extra: Array[Array]) -> void:
+	var puddle := dead.get_trait(TraitData.Kind.DEATH_ZONE)
+	if puddle != null:
+		_add_zone(dead.owner, dead.x, dead.y, puddle, dead.uid)
 	var blast := dead.get_trait(TraitData.Kind.DEATH_BLAST)
 	if blast != null:
 		var r := blast.radius * SCALE
@@ -730,10 +977,11 @@ func _apply_statuses() -> void:
 	for p in _pending_status:
 		var u := units[p[0]]
 		if u.alive:
-			_add_status(u, p[1], p[2], p[3])
+			_add_status(u, p[1], p[2], p[3], p[4] if p.size() > 4 else 0)
 
 
-func _add_status(u: SimUnit, effect: Effect, power: int, ticks: int) -> void:
+## cap: for SLOW, the most this application may push the total to (0 = slow_max_pct).
+func _add_status(u: SimUnit, effect: Effect, power: int, ticks: int, cap: int = 0) -> void:
 	match effect:
 		Effect.STUN:
 			# Immunity starts with the stun and lasts until stun_immunity_seconds after it.
@@ -749,14 +997,15 @@ func _add_status(u: SimUnit, effect: Effect, power: int, ticks: int) -> void:
 			_set_status(u, effect, maxi(cur, power), ticks)
 		Effect.SLOW:
 			# Slows from every source add up to slow_max_pct; the longer duration wins.
+			var limit := _cfg.slow_max_pct if cap <= 0 else mini(cap, _cfg.slow_max_pct)
 			if has_status(u, effect):
 				var s: StatusEffect = u.statuses[effect]
-				s.power = mini(_cfg.slow_max_pct, s.power + power)
+				s.power = maxi(s.power, mini(limit, s.power + power))
 				if tick + ticks > s.until:
 					s.until = tick + ticks
 					s.length = ticks
 			else:
-				_set_status(u, effect, mini(_cfg.slow_max_pct, power), ticks)
+				_set_status(u, effect, mini(limit, power), ticks)
 
 
 func _set_status(u: SimUnit, effect: Effect, power: int, ticks: int) -> void:

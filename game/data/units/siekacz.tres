@@ -1,6 +1,20 @@
 [gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Na oślep"
+kind = 19
+
+[sub_resource type="Resource" id="trait_1"]
+script = ExtResource("2")
+label = "Tłum"
+radius = 40
+power = 5
+threshold_pct = 30
+kind = 20
 
 [resource]
 script = ExtResource("1")
@@ -17,5 +31,6 @@ attack_interval = 0.3
 attack_range = 190
 speed = 60
 size = 9
-blurb = "Masa szybkiego ostrzału."
+traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
+blurb = "Na oślep: strzela w losowy cel w zasięgu. Tłum: +5% szybkości ataku za Siekacza obok (maks. 30%)."
 evolves_to = &"megasiekacz"

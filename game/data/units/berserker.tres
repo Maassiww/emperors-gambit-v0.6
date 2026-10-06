@@ -1,6 +1,25 @@
 [gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Przez szereg"
+kind = 16
+
+[sub_resource type="Resource" id="trait_1"]
+script = ExtResource("2")
+label = "Ostatni oddech"
+duration = 0.6
+kind = 17
+
+[sub_resource type="Resource" id="trait_2"]
+script = ExtResource("2")
+label = "Szał"
+power = 10
+stacks = 5
+kind = 18
 
 [resource]
 script = ExtResource("1")
@@ -17,5 +36,6 @@ attack_interval = 0.6
 attack_range = 25
 speed = 100
 size = 11
-blurb = "Tania, szybka masa do zwarcia."
+traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1"), SubResource("trait_2")])
+blurb = "Przez szereg: omija ciężkie melee (chyba że prowokują). Ostatni oddech: walczy jeszcze chwilę po śmierci."
 is_evolution = true

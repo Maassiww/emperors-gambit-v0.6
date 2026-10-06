@@ -1,6 +1,25 @@
 [gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Desant"
+delay = 0.5
+period = 6.0
+cast_range = 420
+radius = 40
+duration = 1.0
+max_count = 2
+kind = 10
+
+[sub_resource type="Resource" id="trait_1"]
+script = ExtResource("2")
+label = "Egzekucja"
+power = 50
+threshold_pct = 30
+kind = 2
 
 [resource]
 script = ExtResource("1")
@@ -17,5 +36,6 @@ attack_interval = 0.8
 attack_range = 30
 speed = 90
 size = 15
-blurb = "Szybki DPS w zwarciu."
+traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
+blurb = "Desant: na starcie skacze na front wroga i ogłusza na 1 s. Dobija rannych (<30% HP)."
 is_evolution = true

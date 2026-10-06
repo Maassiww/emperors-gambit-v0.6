@@ -1,6 +1,13 @@
 [gd_resource type="Resource" script_class="UnitData" format=3]
 
 [ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Leczy dwóch"
+max_count = 2
+kind = 23
 
 [resource]
 script = ExtResource("1")
@@ -17,6 +24,7 @@ attack_interval = 1.0
 attack_range = 160
 speed = 45
 size = 15
+traits = Array[ExtResource("2")]([SubResource("trait_0")])
 blurb = "Leczy najbardziej rannego sojusznika."
 glyph = "+"
 is_evolution = true
