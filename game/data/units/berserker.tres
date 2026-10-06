@@ -37,5 +37,6 @@ attack_range = 25
 speed = 100
 size = 11
 traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1"), SubResource("trait_2")])
-blurb = "Przez szereg: omija ciężkie melee (chyba że prowokują). Ostatni oddech: walczy jeszcze chwilę po śmierci."
+blurb = "Ewolucja: silniejszy. Każde zabójstwo +10% szybkości ataku (maks. +50%)."
+tags = "Masa · Omija tanki · Szał"
 is_evolution = true

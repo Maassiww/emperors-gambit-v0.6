@@ -1,0 +1,15 @@
+# Godot Indie Project: [Emperor's Gambit]
+
+## Technologia
+Silnik: Godot 4.x (używaj ściśle składni Godot 4, np. @onready, Input.is_action_just_pressed)
+Język: GDScript
+Styl pisania kodu: Nazwy zmiennych i funkcji w snake_case, nazwy klas w PascalCase. Dołączaj statyczne typowanie (np. var health: int = 100).
+
+## Przydatne komendy terminala dla bota
+Uruchomienie gry do testów: godot --position 100,100
+Uruchomienie konkretnej sceny: godot res://scenes/main.tscn
+
+## Zasady architektury
+Każdy skrypt powinien dziedziczyć po odpowiednim węźle (Node/CharacterBody2D/etc.).
+Używaj sygnałów (Signals) do komunikacji "w górę" i metod do komunikacji "w dół".
+Nie twórz gigantycznych skryptów, rozbijaj mechaniki na mniejsze komponenty (Nodes)

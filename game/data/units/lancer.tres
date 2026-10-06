@@ -28,5 +28,6 @@ speed = 0
 armor_pierce = true
 size = 13
 traits = Array[ExtResource("2")]([SubResource("trait_0")])
-blurb = "Snajper: celuje w najcenniejszy cel (ewolucje, tanki). Pocisk przebija pancerz i linię za celem."
+blurb = "Stoi w miejscu, zasięg 360. Celuje w ewolucje, potem w tanki. Ignoruje pancerz, pocisk rani też wrogów za celem (50%)."
+tags = "Snajper · Przebija pancerz · Na tanki"
 evolves_to = &"lancer_ciezki"

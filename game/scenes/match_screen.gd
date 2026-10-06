@@ -220,7 +220,7 @@ func _refresh_cards() -> void:
 		info[0].visible = o.tier > 0
 		info[1].text = o.label()
 		info[2].text = "%s · masz: %d" % [UnitData.ROLE_NAMES[u.role], army.count(o.unit_id)]
-		info[3].text = GameDB.unit(o.produces).blurb
+		info[3].text = GameDB.unit(o.produces).tags
 		var style := StyleBoxFlat.new()
 		style.bg_color = GameDB.faction(u.faction).color.darkened(0.55)
 		style.border_color = TIER_COLORS[o.tier]

@@ -39,5 +39,6 @@ attack_range = 30
 speed = 35
 size = 11
 traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
-blurb = "Tank. Maź: co 5 s kałuża pod nogami (spowolnienie, korozja). Po śmierci duża kałuża."
+blurb = "Co 5 s zostawia kałużę Mazi na 3 s: wrogowie w niej −15% szybkości i −1 pancerza. Po śmierci duża kałuża (−30%)."
+tags = "Tank · Spowalnia · Kruszy pancerz"
 evolves_to = &"megapancerniak"

@@ -37,5 +37,6 @@ attack_range = 30
 speed = 90
 size = 15
 traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
-blurb = "Desant: na starcie skacze na front wroga i ogłusza na 1 s. Dobija rannych (<30% HP)."
+blurb = "Ewolucja: silniejszy. Desant dwa razy (drugi skok po 6 s), szersze ogłuszenie."
+tags = "Skok · Ogłuszenie · Dobija"
 is_evolution = true

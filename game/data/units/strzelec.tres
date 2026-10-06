@@ -33,5 +33,6 @@ attack_range = 220
 speed = 60
 size = 13
 traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
-blurb = "Ogień zaporowy: trafienia spowalniają (do 30%). Na starcie rozchodzi się na skrzydła."
+blurb = "Szybki ostrzał. Trafienie spowalnia cel o 10% (ruch i ataki, do 30%). Na starcie rozchodzi się na skrzydła."
+tags = "Szybkostrzelny · Spowalnia · Słaby na pancerz"
 evolves_to = &"strzelec_weteran"

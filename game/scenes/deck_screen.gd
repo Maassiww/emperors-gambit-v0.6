@@ -89,7 +89,7 @@ func _build() -> void:
 			var u := GameDB.unit(id)
 			if u.faction != section[0]:
 				continue
-			var b := _tile(GameDB.faction(u.faction).color, 128)
+			var b := _tile(GameDB.faction(u.faction).color, 156)
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			var labels := MatchScreen.card_labels(b, [[17, Color.WHITE], [12, Color(1, 1, 1, 0.6)], [11, Color(1, 1, 1, 0.85)]])
 			labels[0].text = u.display_name

@@ -32,5 +32,6 @@ attack_range = 30
 speed = 35
 size = 15
 traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
-blurb = "Tank. Prowokacja: wrogowie obok muszą bić jego. Mur tarcz: obok innego Bastionu −20% obrażeń od strzałów."
+blurb = "Ewolucja: więcej HP, pancerza i obrażeń. Prowokacja 85, Mur tarcz −35%."
+tags = "Tank · Prowokacja · Tarcza"
 is_evolution = true

@@ -39,5 +39,6 @@ attack_range = 30
 speed = 35
 size = 13
 traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
-blurb = "Tank. Maź: co 5 s kałuża pod nogami (spowolnienie, korozja). Po śmierci duża kałuża."
+blurb = "Ewolucja: kałuża co 3 s (−25%), większa po śmierci (−35%)."
+tags = "Tank · Spowalnia · Kruszy pancerz"
 is_evolution = true

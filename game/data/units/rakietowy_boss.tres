@@ -35,5 +35,6 @@ speed = 0
 splash_radius = 50
 size = 11
 traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
-blurb = "Artyleria z rozrzutem: zostawia płonącą ziemię, czasem rani swoich (15%). Stoi w miejscu."
+blurb = "Ewolucja: celniejszy, mocniejsze rakiety i ogień."
+tags = "Artyleria · Obszar · Ogień"
 is_evolution = true

@@ -32,5 +32,6 @@ attack_range = 190
 speed = 60
 size = 11
 traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
-blurb = "Na oślep: strzela w losowy cel w zasięgu. Tłum: +5% szybkości ataku za Siekacza obok (maks. 30%)."
+blurb = "Ewolucja: silniejszy, +10% za Siekacza obok (maks. +60%)."
+tags = "Masa · Losowy ogień · Rośnie w tłumie"
 is_evolution = true

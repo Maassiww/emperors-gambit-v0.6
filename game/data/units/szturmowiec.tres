@@ -36,5 +36,6 @@ attack_range = 30
 speed = 90
 size = 13
 traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
-blurb = "Desant: na starcie skacze na front wroga i ogłusza na 1 s. Dobija rannych (<30% HP)."
+blurb = "Desant: po 0,5 s skacze do najbliższego wroga i ogłusza wrogów wokół lądowania na 1 s. +50% obrażeń w cele poniżej 30% HP."
+tags = "Skok · Ogłuszenie · Dobija"
 evolves_to = &"szturmowiec_elity"

@@ -30,5 +30,6 @@ attack_range = 25
 speed = 100
 size = 9
 traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
-blurb = "Przez szereg: omija ciężkie melee (chyba że prowokują). Ostatni oddech: walczy jeszcze chwilę po śmierci."
+blurb = "Masa ×5. Omija tanki i biegnie na dalsze cele; zatrzymuje go tylko Prowokacja. Po śmierci walczy jeszcze 0,6 s."
+tags = "Masa · Omija tanki · Szybki"
 evolves_to = &"berserker"

@@ -34,8 +34,10 @@ const ROLE_NAMES := ["ciężkie melee", "lekkie melee", "szybki range", "ciężk
 ## Cannot hit flyers even though it is not melee (e.g. a running bomb).
 @export var ground_only: bool = false
 @export var traits: Array[TraitData] = []
-## One-line rules text for cards.
+## Exact rules in a few short sentences (deck screen).
 @export var blurb: String
+## At-a-glance role tags for the in-match card, e.g. "Tank · Prowokacja · Tarcza".
+@export var tags: String
 ## Letter drawn on the placeholder sprite of specials and summons.
 @export var glyph: String
 ## Bot/report estimate of what the traits are worth on top of raw stats.
