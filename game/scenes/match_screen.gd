@@ -182,7 +182,7 @@ func _refresh_preview() -> void:
 	var view := game.view_for(0)
 	var armies: Array[Army] = [view.me.army, view.opponent.army]
 	var bases: Array[BaseData] = [game.players[0].base, game.players[1].base]
-	arena.show_sim(BattleSim.new(armies, bases, cfg, RandomNumberGenerator.new()))
+	arena.show_sim(BattleSim.new(armies, bases, cfg, RandomNumberGenerator.new(), game.purity()))
 
 
 func _refresh_hud() -> void:

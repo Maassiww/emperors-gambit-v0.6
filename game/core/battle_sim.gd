@@ -116,6 +116,7 @@ var _ability_used: Array[bool] = [false, false]
 var _ability_until: Array[int] = [0, 0]
 ## Distinct factions on each side (neutral excluded).
 var _factions: Array[int] = [0, 0]
+var _purity: Array[int] = [100, 100]
 var _taunters: Array[SimUnit] = []
 var _pending_status: Array[Array] = []
 var _pending_spawn: Array[Array] = []
@@ -123,9 +124,12 @@ var zones: Array[Zone] = []
 var _pending_zones: Array[Zone] = []
 
 
-func _init(armies: Array[Army], bases: Array[BaseData], cfg: GameConfig, rng: RandomNumberGenerator) -> void:
+## purity: base passive strength (%) per side, from BaseData.purity_pct() of each deck.
+func _init(armies: Array[Army], bases: Array[BaseData], cfg: GameConfig, rng: RandomNumberGenerator,
+		purity: Array[int] = [100, 100]) -> void:
 	_cfg = cfg
 	_bases = bases
+	_purity = purity
 	_rng = rng
 	_max_ticks = int(cfg.battle_max_seconds * cfg.ticks_per_second)
 	_overtime_tick = int(cfg.overtime_after_seconds * cfg.ticks_per_second)
@@ -268,8 +272,6 @@ func _add_unit(owner: int, data: UnitData, x: int, y: int) -> SimUnit:
 	u.damage = data.damage
 	u.armor = data.armor
 	var base := _bases[owner]
-	if base.passive == BaseData.Passive.ARMOR_BONUS and data.faction == base.faction:
-		u.armor += base.passive_value
 	u.interval = maxi(1, _seconds_to_ticks(data.attack_interval))
 	u.attack_range = data.attack_range * SCALE
 	u.speed = data.speed * SCALE / _cfg.ticks_per_second
@@ -848,7 +850,7 @@ func _push_apart(a: SimUnit, b: SimUnit) -> void:
 
 ## Final damage of one hit: buffs, rage, overtime, execute, armor (unless pierce), mark.
 func _damage(u: SimUnit, t: SimUnit, base_damage: int) -> int:
-	var dmg := base_damage * (100 + u.rage * _bases[u.owner].rage_pct_per_stack + u.buff_damage) / 100
+	var dmg := base_damage * (100 + rage_pct(u) + u.buff_damage) / 100
 	dmg = dmg * overtime_pct() / 100
 	var execute := u.get_trait(TraitData.Kind.EXECUTE)
 	if execute != null and t.hp * 100 < t.max_hp * execute.threshold_pct:
@@ -859,7 +861,21 @@ func _damage(u: SimUnit, t: SimUnit, base_damage: int) -> int:
 		dmg = dmg * (100 + t.statuses[Effect.MARK].power) / 100
 	if t.wall_pct > 0 and u.data.unit_class == UnitData.UnitClass.RANGED:
 		dmg = dmg * (100 - t.wall_pct) / 100
+	dmg = dmg * (100 - damage_reduction_pct(t.owner)) / 100
 	return maxi(1, dmg)
+
+
+## Base passive DAMAGE_REDUCTION of a side, scaled by deck purity.
+func damage_reduction_pct(owner: int) -> int:
+	var base := _bases[owner]
+	if base.passive != BaseData.Passive.DAMAGE_REDUCTION:
+		return 0
+	return base.passive_value * _purity[owner] / 100
+
+
+## Rage bonus damage (%) of a unit, scaled by its side's deck purity.
+func rage_pct(u: SimUnit) -> int:
+	return u.rage * _bases[u.owner].rage_pct_per_stack * _purity[u.owner] / 100
 
 
 func _speed_pct(u: SimUnit) -> int:
@@ -966,10 +982,10 @@ func _on_death(dead: SimUnit, extra: Array[Array]) -> void:
 				extra.append([dead.uid, e.uid, _damage(dead, e, blast.power), true])
 		events.append({"type": "blast", "src": dead.uid, "pos": Vector2i(dead.x, dead.y), "r": blast.radius})
 	var base := _bases[dead.owner]
-	if base.passive != BaseData.Passive.RAGE_ON_ALLY_DEATH or dead.data.faction != base.faction:
+	if base.passive != BaseData.Passive.RAGE_ON_ALLY_DEATH or _purity[dead.owner] <= 0:
 		return
 	for u in units:
-		if u.alive and u.owner == dead.owner and u.data.faction == base.faction:
+		if u.alive and u.owner == dead.owner:
 			u.rage = mini(u.rage + 1, base.passive_value)
 
 
@@ -1081,6 +1097,7 @@ func _zone_damage(z: Zone, e: SimUnit) -> int:
 	dmg = dmg * UnitData.armor_pass_pct(armor_of(e), _cfg) / 100
 	if has_status(e, Effect.MARK):
 		dmg = dmg * (100 + e.statuses[Effect.MARK].power) / 100
+	dmg = dmg * (100 - damage_reduction_pct(e.owner)) / 100
 	return maxi(1, dmg)
 
 

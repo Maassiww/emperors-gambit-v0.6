@@ -91,7 +91,15 @@ func create_battle() -> BattleSim:
 	assert(phase == Phase.BATTLE)
 	var armies: Array[Army] = [players[0].army, players[1].army]
 	var bases: Array[BaseData] = [players[0].base, players[1].base]
-	return BattleSim.new(armies, bases, cfg, _battle_rng)
+	return BattleSim.new(armies, bases, cfg, _battle_rng, purity())
+
+
+## Base passive strength (%) of both players, from their decks.
+func purity() -> Array[int]:
+	var out: Array[int] = []
+	for p in players:
+		out.append(p.base.purity_pct(p.deck, cfg))
+	return out
 
 
 func play_battle() -> BattleSim.Result:

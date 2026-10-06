@@ -16,6 +16,9 @@ enum DrawMode { ALWAYS_WINNER, DRAW_SUDDEN_DEATH }
 @export var move_time_seconds: float = 15.0
 ## Deck building: at most this many special cards in a deck.
 @export var max_specials_in_deck: int = 1
+## Base passive strength (%) by the number of deck cards outside the base's faction (neutral counts as foreign):
+## index 0 = pure deck. More foreign cards than listed = 0%.
+@export var purity_pct_by_foreign: Array[int] = [100, 70, 40]
 
 @export_group("Hand")
 ## Cards drawn from the deck for each move (all of them if the deck is smaller).

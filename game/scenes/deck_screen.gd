@@ -134,6 +134,9 @@ func _refresh() -> void:
 	_info.text = "Deck %d/%d  ·  speciale %d/%d" % [_deck.size(), cfg.deck_size, specials, cfg.max_specials_in_deck]
 	if error != "" and _deck.size() == cfg.deck_size:
 		_info.text += "  ·  " + error
+	var base := GameDB.base(_base)
+	var pct := base.purity_pct(_deck, cfg) if _deck.size() == cfg.deck_size else 100
+	_info.text += "\nPasywka bazy %d%%: %s" % [pct, base.passive_text(pct)]
 	_info.add_theme_color_override("font_color", Color(1, 0.5, 0.45) if specials > cfg.max_specials_in_deck else Color.WHITE)
 	_play.disabled = error != ""
 	for id in _card_buttons:

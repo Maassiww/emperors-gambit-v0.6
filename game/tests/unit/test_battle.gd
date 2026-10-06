@@ -66,13 +66,47 @@ func test_pierce_ignores_armor() -> void:
 	assert_eq(sim._damage(sim.units[0], sim.units[1], sim.units[0].damage), GameDB.unit(&"lancer").damage)
 
 
-func test_citadel_armor_only_for_humans() -> void:
-	var sim := _sim({&"bastion": 1, &"pancerniak": 1}, {}, 1, [&"citadel", &"war_camp"])
-	for u in sim.units:
-		if u.data.id == &"bastion":
-			assert_eq(u.armor, 8 + GameDB.base(&"citadel").passive_value, "bastion armor")
-		else:
-			assert_eq(u.armor, u.data.armor, "ork armor under human base")
+func test_purity_by_foreign_cards() -> void:
+	var cfg := GameDB.config
+	var citadel := GameDB.base(&"citadel")
+	var pure: Array[StringName] = [&"bastion", &"szturmowiec", &"strzelec", &"lancer", &"medyk"]
+	assert_eq(citadel.purity_pct(pure, cfg), cfg.purity_pct_by_foreign[0])
+	var one := pure.duplicate()
+	one[0] = &"najemnik"
+	assert_eq(citadel.purity_pct(one, cfg), cfg.purity_pct_by_foreign[1], "neutral counts as foreign")
+	var two := one.duplicate()
+	two[1] = &"pancerniak"
+	assert_eq(citadel.purity_pct(two, cfg), cfg.purity_pct_by_foreign[2])
+	var three := two.duplicate()
+	three[2] = &"siekacz"
+	assert_eq(citadel.purity_pct(three, cfg), 0)
+
+
+func test_citadel_reduction_whole_army_scaled_by_purity() -> void:
+	var armies: Array[Army] = [_army({&"szaleniec": 1}), _army({&"pancerniak": 1, &"bastion": 1})]
+	var bases: Array[BaseData] = [GameDB.base(&"war_camp"), GameDB.base(&"citadel")]
+	var full := BattleSim.new(armies, bases, GameDB.config, RandomNumberGenerator.new(), [100, 100] as Array[int])
+	var part := BattleSim.new(armies, bases, GameDB.config, RandomNumberGenerator.new(), [100, 40] as Array[int])
+	var v := GameDB.base(&"citadel").passive_value
+	assert_eq(full.damage_reduction_pct(1), v)
+	assert_eq(part.damage_reduction_pct(1), v * 40 / 100)
+	var ork := full.units[1] if full.units[1].data.id == &"pancerniak" else full.units[2]
+	assert_true(full._damage(full.units[0], ork, 1000) < part._damage(part.units[0], part.units[ork.uid], 1000),
+		"foreign units protected too, more at full purity")
+
+
+func test_rage_from_any_ally_scaled_by_purity() -> void:
+	var armies: Array[Army] = [_army({&"szaleniec": 2, &"bastion": 1}), _army({})]
+	var bases: Array[BaseData] = [GameDB.base(&"war_camp"), GameDB.base(&"citadel")]
+	var sim := BattleSim.new(armies, bases, GameDB.config, RandomNumberGenerator.new(), [70, 100] as Array[int])
+	var bastion: BattleSim.SimUnit = sim.units.filter(func(u: BattleSim.SimUnit) -> bool: return u.data.id == &"bastion")[0]
+	var dead: BattleSim.SimUnit = sim.units.filter(func(u: BattleSim.SimUnit) -> bool: return u.data.id == &"szaleniec")[0]
+	dead.hp = 0
+	sim.tick = 5
+	dead.breath_until = 1  # last breath already over
+	sim._apply_hits([] as Array[Array])
+	assert_eq(bastion.rage, 1, "human under ork base gets rage too")
+	assert_eq(sim.rage_pct(bastion), GameDB.base(&"war_camp").rage_pct_per_stack * 70 / 100)
 
 
 func test_healers_only_end_immediately_by_hp() -> void:

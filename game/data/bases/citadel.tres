@@ -5,11 +5,11 @@
 [resource]
 script = ExtResource("1")
 id = &"citadel"
-blurb = "Ludzie +1 pancerza. Sztandar: przy 70% HP armii +25% szybkości ataku."
+blurb = "Armia −7% otrzymywanych obrażeń. Sztandar: przy 70% HP armii +25% szybkości ataku."
 display_name = "Cytadela Imperium"
 faction = &"humans"
 passive = 1
-passive_value = 1
+passive_value = 7
 ability = 1
 ability_power = 25
 ability_duration = 4.0
