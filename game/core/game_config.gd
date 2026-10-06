@@ -15,7 +15,7 @@ enum DrawMode { ALWAYS_WINNER, DRAW_SUDDEN_DEATH }
 ## Seconds per draft move before the first option is picked automatically.
 @export var move_time_seconds: float = 15.0
 ## Deck building: at most this many special cards in a deck.
-@export var max_specials_in_deck: int = 2
+@export var max_specials_in_deck: int = 1
 
 @export_group("Hand")
 ## Cards drawn from the deck for each move (all of them if the deck is smaller).

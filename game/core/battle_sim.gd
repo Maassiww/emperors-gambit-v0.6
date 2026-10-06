@@ -44,8 +44,6 @@ class SimUnit:
 	var traits: Array[TraitData] = []
 	var timers: Array[int] = []
 	var statuses: Dictionary = {}
-	## Strength (%) of this unit's purity-scaled auras.
-	var aura_pct := 100
 	## Recomputed every tick from allied auras.
 	var buff_damage := 0
 	var buff_attack_speed := 0
@@ -93,9 +91,8 @@ var _max_ticks: int
 var _overtime_tick: int
 var _ability_used: Array[bool] = [false, false]
 var _ability_until: Array[int] = [0, 0]
-## Distinct factions on each side (neutral excluded) and distinct card types per faction.
+## Distinct factions on each side (neutral excluded).
 var _factions: Array[int] = [0, 0]
-var _types: Array[Dictionary] = [{}, {}]
 var _taunters: Array[SimUnit] = []
 var _pending_status: Array[Array] = []
 var _pending_spawn: Array[Array] = []
@@ -192,19 +189,9 @@ func _read_board(owner: int, army: Army) -> void:
 		if army.counts[id] <= 0:
 			continue
 		var f := GameDB.unit(id).faction
-		_types[owner][f] = _types[owner].get(f, 0) + 1
 		if f != UnitData.NEUTRAL:
 			factions[f] = true
 	_factions[owner] = factions.size()
-
-
-## Purity-scaled auras: full with no foreign card types on the board, half with one, none with more.
-func _purity_pct(owner: int, faction: StringName) -> int:
-	var foreign := 0
-	for f in _types[owner]:
-		if f != faction:
-			foreign += _types[owner][f]
-	return [100, 50][foreign] if foreign < 2 else 0
 
 
 func _spawn(owner: int, army: Army) -> void:
@@ -256,7 +243,6 @@ func _add_unit(owner: int, data: UnitData, x: int, y: int) -> SimUnit:
 		if t.active_for(_factions[owner]):
 			u.traits.append(t)
 			u.timers.append(_seconds_to_ticks(t.delay))
-	u.aura_pct = _purity_pct(owner, data.faction)
 	units.append(u)
 	return u
 
@@ -282,9 +268,6 @@ func _prepare_tick() -> void:
 
 
 func _apply_aura(s: SimUnit, t: TraitData) -> void:
-	var pct := s.aura_pct if t.scales_with_purity else 100
-	if pct <= 0:
-		return
 	var r := t.radius * SCALE
 	for a in units:
 		if not a.alive or a.owner != s.owner or _dist_sq(s, a) > r * r:
@@ -296,10 +279,10 @@ func _apply_aura(s: SimUnit, t: TraitData) -> void:
 			TraitData.Affects.MELEE:
 				if a.data.unit_class != UnitData.UnitClass.MELEE:
 					continue
-		a.buff_damage = maxi(a.buff_damage, t.buff_damage_pct * pct / 100)
-		a.buff_attack_speed = maxi(a.buff_attack_speed, t.buff_attack_speed_pct * pct / 100)
-		a.buff_move = maxi(a.buff_move, t.buff_move_pct * pct / 100)
-		a.buff_armor = maxi(a.buff_armor, t.buff_armor * pct / 100)
+		a.buff_damage = maxi(a.buff_damage, t.buff_damage_pct)
+		a.buff_attack_speed = maxi(a.buff_attack_speed, t.buff_attack_speed_pct)
+		a.buff_move = maxi(a.buff_move, t.buff_move_pct)
+		a.buff_armor = maxi(a.buff_armor, t.buff_armor)
 
 
 func _act(u: SimUnit, hits: Array[Array]) -> void:

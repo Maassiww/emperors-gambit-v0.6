@@ -69,7 +69,7 @@ static func deck_error(deck: Array) -> String:
 		if units[id].is_special():
 			specials += 1
 	if specials > config.max_specials_in_deck:
-		return "Maks. %d speciale w decku" % config.max_specials_in_deck
+		return "Za dużo speciali (maks. %d)" % config.max_specials_in_deck
 	return ""
 
 

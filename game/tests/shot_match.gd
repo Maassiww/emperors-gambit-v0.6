@@ -15,8 +15,8 @@ func _initialize() -> void:
 	var m := MatchScreen.new()
 	var bases: Array[StringName] = [&"citadel", &"war_camp"]
 	m.setup([
-		[&"bastion", &"zabojca", &"najemnik", &"siekacz", &"lancer"],
-		[&"pancerniak", &"szaleniec", &"konstruktor", &"szaman", &"bombowiec"],
+		[&"bastion", &"chorazy", &"najemnik", &"siekacz", &"lancer"],
+		[&"pancerniak", &"szaleniec", &"lowca", &"szaman", &"siekacz"],
 	], bases, 3)
 	holder.add_child(m)
 	# Round 1 straight to round 2 draft, so both sides have units on screen.

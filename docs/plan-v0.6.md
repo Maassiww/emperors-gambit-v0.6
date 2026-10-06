@@ -33,7 +33,10 @@ Każda jednostka ma czytelną cechę, a trzy sposoby grania są realne i zbalans
 
 ## Etapy
 
-### 1. Porządki po v0.5 (mały)
+### 1. Porządki po v0.5 (mały) – ✅ zrobione 2026-10-06
+Wynik: 2000 meczów bot vs bot, karty 44–57% (szum między seriami ±3–5 pkt), Cytadela 56% / Obóz 44%.
+Po pierwszej serii wzmocnione: Chorąży (+30% obr., +3 panc., promień 180; był 35%) i Najemnik (210 HP, 30 obr.; był 41%).
+Przy limicie 1 speciala czysty deck to zawsze 4 zwykłe karty frakcji + 1 special – różnorodność czystych decków dadzą dopiero cechy z etapu 3.
 - Obrys aur bez przerw: dokładny punkt przecięcia okręgów zamiast pomijania odcinka.
 - Config: limit 1 speciala; aury bez skalowania czystością (usunąć `scales_with_purity` z danych i kod `_purity_pct`).
 - Bezfrakcyjni:

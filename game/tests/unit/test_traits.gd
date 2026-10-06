@@ -60,8 +60,8 @@ func test_summons_and_evolutions_are_not_cards() -> void:
 
 
 func test_deck_rules() -> void:
-	assert_eq(GameDB.deck_error([&"bastion", &"strzelec", &"medyk", &"zabojca", &"lancer"]), "")
-	assert_true(GameDB.deck_error([&"medyk", &"zabojca", &"psionik", &"bastion", &"lancer"]) != "", "3 specials")
+	assert_eq(GameDB.deck_error([&"bastion", &"strzelec", &"medyk", &"najemnik", &"lancer"]), "")
+	assert_true(GameDB.deck_error([&"bastion", &"strzelec", &"medyk", &"zabojca", &"lancer"]) != "", "2 specials")
 	assert_true(GameDB.deck_error([&"bastion", &"bastion", &"medyk", &"zabojca", &"lancer"]) != "", "duplicate")
 	assert_true(GameDB.deck_error([&"bastion", &"strzelec"]) != "", "too small")
 	assert_true(GameDB.deck_error([&"bastion", &"strzelec", &"medyk", &"zabojca", &"wiezyczka"]) != "", "summon")
@@ -249,19 +249,14 @@ func test_flyer_death_blast() -> void:
 	assert_true(_first(sim, &"siekacz", 1).hp < hp_before, "blast did no damage")
 
 
-# --- auras and purity --------------------------------------------------------
+# --- auras --------------------------------------------------------------------
 
-func test_banner_aura_scales_with_purity() -> void:
+func test_banner_aura_ignores_foreign_cards() -> void:
 	var t := GameDB.unit(&"chorazy").get_trait(TraitData.Kind.AURA)
-	var pure := _sim({&"chorazy": 1, &"bastion": 1}, {})
-	pure._prepare_tick()
-	assert_eq(_first(pure, &"bastion").buff_damage, t.buff_damage_pct, "pure")
-	var one := _sim({&"chorazy": 1, &"bastion": 1, &"siekacz": 1}, {})
-	one._prepare_tick()
-	assert_eq(_first(one, &"bastion").buff_damage, t.buff_damage_pct / 2, "one foreign type")
-	var two := _sim({&"chorazy": 1, &"bastion": 1, &"siekacz": 1, &"szaleniec": 1}, {})
-	two._prepare_tick()
-	assert_eq(_first(two, &"bastion").buff_damage, 0, "two foreign types")
+	assert_eq(t.label, "Chorągiew")
+	var mixed := _sim({&"chorazy": 1, &"bastion": 1, &"siekacz": 1, &"szaleniec": 1}, {})
+	mixed._prepare_tick()
+	assert_eq(_first(mixed, &"bastion").buff_damage, t.buff_damage_pct, "aura weakened by foreign cards")
 
 
 func test_aura_only_for_own_faction() -> void:
@@ -274,20 +269,46 @@ func test_aura_only_for_own_faction() -> void:
 
 
 func test_mercenary_contract_levels() -> void:
+	var t1 := GameDB.unit(&"najemnik").traits[0]
+	var t2 := GameDB.unit(&"najemnik").traits[1]
 	var lone := _sim({&"najemnik": 1}, {})
 	assert_eq(_first(lone, &"najemnik").traits.size(), 0, "level 0 should have no contract")
 	var one := _sim({&"najemnik": 1, &"szaleniec": 1, &"siekacz": 1}, {})
-	var n1 := _first(one, &"najemnik")
+	for u in one.units:
+		_place(u, 360, 600)
 	assert_eq(one.factions_on_board(0), 1)
-	assert_eq(n1.traits.size(), 1, "level 1")
+	assert_eq(_first(one, &"najemnik").traits.size(), 1, "level 1")
 	one._prepare_tick()
-	assert_true(_first(one, &"szaleniec").buff_damage > 0, "melee not buffed at level 1")
-	assert_eq(_first(one, &"siekacz").buff_damage, 0, "ranged buffed at level 1")
+	assert_eq(_first(one, &"szaleniec").buff_damage, t1.buff_damage_pct, "melee at level 1")
+	assert_eq(_first(one, &"siekacz").buff_damage, 0, "ranged buffed by a melee contract")
 	var two := _sim({&"najemnik": 1, &"szaleniec": 1, &"siekacz": 1, &"lancer": 1}, {})
+	for u in two.units:
+		_place(u, 360, 600)
 	assert_eq(two.factions_on_board(0), 2)
-	assert_true(_first(two, &"najemnik").get_trait(TraitData.Kind.MARK_ON_HIT) != null, "level 2 mark")
 	two._prepare_tick()
-	assert_true(_first(two, &"siekacz").buff_damage > 0, "ranged not buffed at level 2")
+	assert_eq(_first(two, &"szaleniec").buff_damage, t2.buff_damage_pct, "melee at level 2")
+	assert_eq(_first(two, &"siekacz").buff_damage, 0, "ranged buffed at level 2")
+	assert_true(t2.buff_damage_pct > t1.buff_damage_pct, "level 2 should be stronger")
+
+
+func test_bounty_hunter_mark_grows_with_contract() -> void:
+	var one := _sim({&"lowca": 1, &"szaleniec": 1}, {})
+	var two := _sim({&"lowca": 1, &"szaleniec": 1, &"lancer": 1}, {})
+	var m1 := _first(one, &"lowca").get_trait(TraitData.Kind.MARK_ON_HIT)
+	var m2 := _first(two, &"lowca").get_trait(TraitData.Kind.MARK_ON_HIT)
+	assert_true(m1 != null and m2 != null, "mark missing")
+	assert_true(m2.power > m1.power and m2.duration > m1.duration, "level 2 should mark harder and longer")
+	assert_eq(_first(_sim({&"lowca": 1}, {}), &"lowca").traits.size(), 0, "level 0 should have no contract")
+
+
+func test_presets_and_random_decks_are_legal() -> void:
+	for p in Bot.PRESETS:
+		assert_eq(GameDB.deck_error(p.deck), "", p.name)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	for i in 200:
+		var deck := Bot.random_deck(rng)
+		assert_eq(GameDB.deck_error(deck), "", str(deck))
 
 
 func test_mark_raises_damage_taken() -> void:

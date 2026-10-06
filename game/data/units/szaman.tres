@@ -10,7 +10,6 @@ radius = 160
 affects = 1
 buff_attack_speed_pct = 25
 buff_move_pct = 20
-scales_with_purity = true
 kind = 4
 
 [resource]
@@ -29,7 +28,7 @@ attack_range = 120
 speed = 55
 size = 11
 traits = Array[ExtResource("2")]([SubResource("trait_0")])
-blurb = "Aura: orkowie +25% szybkości ataku i ruchu. Słabnie przy obcych kartach."
+blurb = "Aura Wojenny wrzask: orkowie w pobliżu +25% szybkości ataku, +20% ruchu."
 glyph = "S"
 power_bonus = 1.8
 evolves_to = &"wielki_szaman"

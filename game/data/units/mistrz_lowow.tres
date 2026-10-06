@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="UnitData" format=3]
+
+[ext_resource type="Script" path="res://core/unit_data.gd" id="1"]
+[ext_resource type="Script" path="res://core/trait_data.gd" id="2"]
+
+[sub_resource type="Resource" id="trait_0"]
+script = ExtResource("2")
+label = "Oznaczenie"
+power = 20
+duration = 3.0
+min_factions = 1
+max_factions = 2
+kind = 8
+
+[sub_resource type="Resource" id="trait_1"]
+script = ExtResource("2")
+label = "Oznaczenie"
+power = 40
+duration = 6.0
+min_factions = 2
+kind = 8
+
+[resource]
+script = ExtResource("1")
+id = &"mistrz_lowow"
+display_name = "Mistrz Łowów"
+faction = &"neutral"
+unit_class = 1
+role = 2
+count_per_pick = 2
+hp = 165
+armor = 2
+damage = 14
+attack_interval = 0.35
+attack_range = 210
+speed = 60
+size = 13
+traits = Array[ExtResource("2")]([SubResource("trait_0"), SubResource("trait_1")])
+blurb = "Kontrakt: trafiony cel dostaje +15% obrażeń przez 3 s (1 frakcja), +30% przez 5 s (2 frakcje)."
+power_bonus = 1.2
+is_evolution = true

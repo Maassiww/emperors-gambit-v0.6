@@ -76,13 +76,11 @@ add(evo(b, "arcypsionik", "Arcypsionik", hp=315, armor=3, damage=21, size=14,
         traits=[tr("STUN_PULSE", label="Ogłuszenie", delay=2.5, period=5.0, cast_range=280, radius=80,
                    duration=2.0, power=30)]))
 b = add(unit("chorazy", "Chorąży", "humans", SPECIAL, SPEC, 1, 300, 4, 20, 1.0, 130, 50, 13, glyph="C",
-             power_bonus=1.8, blurb="Aura: ludzie +20% obrażeń i +2 pancerza. Słabnie przy obcych kartach.",
-             traits=[tr("AURA", label="Sztandar", radius=160, affects=FACTION, buff_damage_pct=20, buff_armor=2,
-                        scales_with_purity=True)],
+             power_bonus=1.8, blurb="Aura Chorągiew: ludzie w pobliżu +30% obrażeń i +3 pancerza.",
+             traits=[tr("AURA", label="Chorągiew", radius=180, affects=FACTION, buff_damage_pct=30, buff_armor=3)],
              evolves_to="chorazy_gwardii"))
 add(evo(b, "chorazy_gwardii", "Chorąży Gwardii", hp=450, armor=5, damage=30, size=15,
-        traits=[tr("AURA", label="Sztandar", radius=200, affects=FACTION, buff_damage_pct=28, buff_armor=3,
-                   scales_with_purity=True)]))
+        traits=[tr("AURA", label="Chorągiew", radius=220, affects=FACTION, buff_damage_pct=40, buff_armor=4)]))
 
 # --- Orks: many units per card, weak stats ---------------------------------------------------
 b = add(unit("pancerniak", "Pancerniak", "orks", MELEE, HEAVY, 2, 300, 6, 16, 1.1, 30, 35, 11,
@@ -120,27 +118,38 @@ b = add(unit("bombowiec", "Bombowiec", "orks", SPECIAL, SPEC, 3, 100, 1, 90, 1.0
 add(evo(b, "megabombowiec", "Megabombowiec", hp=150, armor=2, damage=150, size=11,
         traits=[tr("KAMIKAZE", label="Korozja", radius=85, stacks=3, duration=8.0)]))
 b = add(unit("szaman", "Szaman", "orks", SPECIAL, SPEC, 1, 170, 1, 14, 1.0, 120, 55, 11, glyph="S",
-             power_bonus=1.8, blurb="Aura: orkowie +25% szybkości ataku i ruchu. Słabnie przy obcych kartach.",
+             power_bonus=1.8, blurb="Aura Wojenny wrzask: orkowie w pobliżu +25% szybkości ataku, +20% ruchu.",
              traits=[tr("AURA", label="Wojenny wrzask", radius=160, affects=FACTION, buff_attack_speed_pct=25,
-                        buff_move_pct=20, scales_with_purity=True)],
+                        buff_move_pct=20)],
              evolves_to="wielki_szaman"))
 add(evo(b, "wielki_szaman", "Wielki Szaman", hp=255, armor=2, damage=21, size=13,
         traits=[tr("AURA", label="Wojenny wrzask", radius=200, affects=FACTION, buff_attack_speed_pct=35,
-                   buff_move_pct=25, scales_with_purity=True)]))
+                   buff_move_pct=25)]))
 
-# --- Neutral: effects grow with the number of factions on the board -------------------------
-def contract(melee, all_, mark):
-    return [tr("AURA", label="Kontrakt I", radius=150, affects=MELEE_ONLY, buff_damage_pct=melee,
+# --- Neutral: regular cards; the Contract level (factions on the board) strengthens one effect ----
+# Level I: 1 faction among the owner's units (neutral excluded), level II: 2 factions.
+def melee_contract(lvl1, lvl2, radius):
+    return [tr("AURA", label="Kontrakt I", radius=radius, affects=MELEE_ONLY, buff_damage_pct=lvl1,
                min_factions=1, max_factions=2),
-            tr("AURA", label="Kontrakt II", radius=150, affects=ALL, buff_damage_pct=all_, min_factions=2),
-            tr("MARK_ON_HIT", label="Oznaczenie", power=mark, duration=4.0, min_factions=2)]
+            tr("AURA", label="Kontrakt II", radius=radius, affects=MELEE_ONLY, buff_damage_pct=lvl2,
+               min_factions=2)]
 
-b = add(unit("najemnik", "Najemnik", "neutral", SPECIAL, SPEC, 2, 180, 2, 16, 0.6, 150, 60, 11, glyph="N",
-             power_bonus=1.3,
-             blurb="Kontrakt: 1 frakcja na planszy: melee +20% obr. 2 frakcje: wszyscy +12% i Oznaczenie.",
-             traits=contract(20, 12, 20), evolves_to="kapitan_najemnikow"))
-add(evo(b, "kapitan_najemnikow", "Kapitan Najemników", hp=270, armor=3, damage=24, size=13,
-        traits=contract(30, 18, 30)))
+
+def bounty(lvl1, lvl2, dur1, dur2):
+    return [tr("MARK_ON_HIT", label="Oznaczenie", power=lvl1, duration=dur1, min_factions=1, max_factions=2),
+            tr("MARK_ON_HIT", label="Oznaczenie", power=lvl2, duration=dur2, min_factions=2)]
+
+
+b = add(unit("najemnik", "Najemnik", "neutral", MELEE, LIGHT, 2, 210, 3, 30, 0.7, 28, 85, 11,
+             blurb="Kontrakt: melee w pobliżu +15% obrażeń (1 frakcja na planszy), +30% (2 frakcje).",
+             traits=melee_contract(15, 30, 150), power_bonus=1.2, evolves_to="kapitan_najemnikow"))
+add(evo(b, "kapitan_najemnikow", "Kapitan Najemników", hp=315, armor=4, damage=45, size=13,
+        traits=melee_contract(20, 40, 180)))
+b = add(unit("lowca", "Łowca Nagród", "neutral", RANGED, RAPID, 2, 110, 1, 9, 0.35, 210, 60, 11,
+             blurb="Kontrakt: trafiony cel dostaje +15% obrażeń przez 3 s (1 frakcja), +30% przez 5 s (2 frakcje).",
+             traits=bounty(15, 30, 3.0, 5.0), power_bonus=1.2, evolves_to="mistrz_lowow"))
+add(evo(b, "mistrz_lowow", "Mistrz Łowów", hp=165, armor=2, damage=14, size=13,
+        traits=bounty(20, 40, 3.0, 6.0)))
 
 
 # --- writer ----------------------------------------------------------------------------------

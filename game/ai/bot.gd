@@ -4,18 +4,18 @@ extends RefCounted
 
 ## Ready-made loadouts: the bot's decks in the prototype and archetypes for balance runs.
 const PRESETS := [
-	{"name": "Ludzie: mur", "base": &"citadel",
-		"deck": [&"bastion", &"strzelec", &"lancer", &"medyk", &"chorazy"]},
+	{"name": "Ludzie: chorągiew", "base": &"citadel",
+		"deck": [&"bastion", &"szturmowiec", &"strzelec", &"lancer", &"chorazy"]},
 	{"name": "Ludzie: łowcy", "base": &"citadel",
-		"deck": [&"szturmowiec", &"strzelec", &"lancer", &"zabojca", &"psionik"]},
+		"deck": [&"bastion", &"szturmowiec", &"strzelec", &"lancer", &"zabojca"]},
 	{"name": "Orkowie: horda", "base": &"war_camp",
-		"deck": [&"pancerniak", &"szaleniec", &"siekacz", &"szaman", &"bombowiec"]},
+		"deck": [&"pancerniak", &"szaleniec", &"siekacz", &"rakieciarz", &"szaman"]},
 	{"name": "Orkowie: złom", "base": &"war_camp",
-		"deck": [&"pancerniak", &"siekacz", &"rakieciarz", &"konstruktor", &"lotniak"]},
+		"deck": [&"pancerniak", &"szaleniec", &"siekacz", &"rakieciarz", &"konstruktor"]},
 	{"name": "Mix: najemnicy", "base": &"citadel",
-		"deck": [&"bastion", &"szaleniec", &"siekacz", &"lancer", &"najemnik"]},
-	{"name": "Mix: kontrola", "base": &"war_camp",
-		"deck": [&"pancerniak", &"strzelec", &"rakieciarz", &"psionik", &"najemnik"]},
+		"deck": [&"bastion", &"szaleniec", &"najemnik", &"lancer", &"bombowiec"]},
+	{"name": "Mix: łowcy nagród", "base": &"war_camp",
+		"deck": [&"pancerniak", &"strzelec", &"siekacz", &"lowca", &"psionik"]},
 ]
 
 ## 0 = always the best-scored option, higher = more random.
@@ -73,7 +73,9 @@ static func random_deck(rng: RandomNumberGenerator) -> Array[StringName]:
 		var f: StringName = factions[rng.randi_range(0, 1)]
 		pool.assign(all.filter(func(id: StringName) -> bool: return GameDB.unit(id).faction == f))
 		if mode == 1:
-			deck.append(&"najemnik")
+			var neutrals := all.filter(func(id: StringName) -> bool:
+				return GameDB.unit(id).faction == UnitData.NEUTRAL)
+			deck.append(neutrals[rng.randi_range(0, neutrals.size() - 1)])
 	while deck.size() < cfg.deck_size and not pool.is_empty():
 		var id: StringName = pool.pop_at(rng.randi_range(0, pool.size() - 1))
 		var specials := deck.filter(func(d: StringName) -> bool: return GameDB.unit(d).is_special()).size()
@@ -93,34 +95,20 @@ func _score(offer: DraftOffer, army: Army, opp_army: Army) -> float:
 	return value * _counter_factor(data, opp_army) * _composition_factor(data, offer, army)
 
 
-## Purity auras want no foreign card types; neutral contracts want more factions.
+## Neutral contracts want more factions on the board.
 func _composition_factor(data: UnitData, offer: DraftOffer, army: Army) -> float:
-	var types := {}
+	var has_neutral := false
 	var factions := {}
 	for id in army.counts:
-		var f := GameDB.unit(id).faction
-		types[f] = types.get(f, 0) + 1
-		if f != UnitData.NEUTRAL:
-			factions[f] = true
+		var faction := GameDB.unit(id).faction
+		if faction == UnitData.NEUTRAL:
+			has_neutral = true
+		else:
+			factions[faction] = true
 	var f := 1.0
 	var new_type := offer.kind == DraftOffer.Kind.ADD and army.count(offer.unit_id) == 0
-	var aura := data.get_trait(TraitData.Kind.AURA)
-	if aura != null and aura.scales_with_purity:
-		var foreign := 0
-		for faction in types:
-			if faction != data.faction:
-				foreign += types[faction]
-		f *= [1.0, 0.6, 0.3][mini(foreign, 2)]
-	if new_type:
-		# Adding a foreign type weakens our purity auras.
-		for id in army.counts:
-			var u := GameDB.unit(id)
-			var a := u.get_trait(TraitData.Kind.AURA)
-			if a != null and a.scales_with_purity and u.faction != data.faction:
-				f *= 0.7
-				break
-		if data.faction != UnitData.NEUTRAL and not factions.has(data.faction) and types.has(UnitData.NEUTRAL):
-			f *= 1.25
+	if new_type and has_neutral and data.faction != UnitData.NEUTRAL and not factions.has(data.faction):
+		f *= 1.25
 	if data.faction == UnitData.NEUTRAL:
 		f *= [0.6, 1.0, 1.3][mini(factions.size(), 2)]
 	return f

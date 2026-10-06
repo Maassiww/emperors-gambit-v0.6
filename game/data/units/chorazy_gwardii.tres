@@ -5,12 +5,11 @@
 
 [sub_resource type="Resource" id="trait_0"]
 script = ExtResource("2")
-label = "Sztandar"
-radius = 200
+label = "Chorągiew"
+radius = 220
 affects = 1
-buff_damage_pct = 28
-buff_armor = 3
-scales_with_purity = true
+buff_damage_pct = 40
+buff_armor = 4
 kind = 4
 
 [resource]
@@ -29,7 +28,7 @@ attack_range = 130
 speed = 50
 size = 15
 traits = Array[ExtResource("2")]([SubResource("trait_0")])
-blurb = "Aura: ludzie +20% obrażeń i +2 pancerza. Słabnie przy obcych kartach."
+blurb = "Aura Chorągiew: ludzie w pobliżu +30% obrażeń i +3 pancerza."
 glyph = "C"
 power_bonus = 1.8
 is_evolution = true

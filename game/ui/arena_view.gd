@@ -180,7 +180,7 @@ func _draw_hp(u: BattleSim.SimUnit, p: Vector2, s: float) -> void:
 
 
 ## Above the unit: timed effects (name + white bar of the time left).
-## Below: standing state worth knowing (contract level, weakened aura).
+## Below: standing state worth knowing (contract level of neutral units).
 func _draw_unit_labels(u: BattleSim.SimUnit) -> void:
 	var p := _pos(u)
 	var s := float(u.data.size)
@@ -202,10 +202,6 @@ func _draw_unit_labels(u: BattleSim.SimUnit) -> void:
 	var note := ""
 	if u.data.faction == UnitData.NEUTRAL and not u.data.is_summon:
 		note = CONTRACT_LEVELS[mini(sim.factions_on_board(u.owner), 2)]
-	else:
-		for t in u.data.traits:
-			if t.kind == TraitData.Kind.AURA and t.scales_with_purity and u.aura_pct < 100:
-				note = "%s %d%%" % [t.label, u.aura_pct]
 	if note != "":
 		draw_string(_font, Vector2(p.x - 60, p.y + s + 13), note, HORIZONTAL_ALIGNMENT_CENTER, 120, 11, Color(1, 0.9, 0.6, 0.85))
 
@@ -223,7 +219,7 @@ func _draw_rings() -> void:
 			if t.kind == TraitData.Kind.TAUNT:
 				key = "taunt%d" % u.owner
 				color = TAUNT_RING
-			elif t.kind == TraitData.Kind.AURA and (not t.scales_with_purity or u.aura_pct > 0):
+			elif t.kind == TraitData.Kind.AURA:
 				key = "aura%d%s" % [u.owner, u.data.faction]
 				color = GameDB.faction(u.data.faction).color.lightened(0.3)
 				color.a = 0.45
@@ -241,20 +237,39 @@ func _draw_union_outline(circles: Array, color: Color) -> void:
 		var c: Vector3 = circles[i]
 		var center := Vector2(c.x, c.y)
 		var n := maxi(24, int(c.z / 4.0))
-		var prev_ok := false
-		var prev := Vector2.ZERO
-		for k in n + 1:
-			var pt := center + Vector2.from_angle(TAU * k / n) * c.z
-			var ok := true
-			for j in circles.size():
-				var o: Vector3 = circles[j]
-				if j != i and pt.distance_squared_to(Vector2(o.x, o.y)) < o.z * o.z - 1.0:
-					ok = false
-					break
-			if ok and prev_ok:
-				draw_line(prev, pt, color, 2.0)
+		var prev_a := 0.0
+		var prev_ok := _outside_others(center + Vector2.from_angle(0.0) * c.z, circles, i)
+		for k in range(1, n + 1):
+			var a := TAU * k / n
+			var ok := _outside_others(center + Vector2.from_angle(a) * c.z, circles, i)
+			var from_a := prev_a
+			var to_a := a
+			if ok != prev_ok:
+				# Bisect to the exact crossing so arcs of touching circles meet without a gap.
+				var lo := prev_a
+				var hi := a
+				for _step in 8:
+					var mid := (lo + hi) * 0.5
+					if _outside_others(center + Vector2.from_angle(mid) * c.z, circles, i) == prev_ok:
+						lo = mid
+					else:
+						hi = mid
+				if prev_ok:
+					to_a = lo
+				else:
+					from_a = hi
+			if ok or prev_ok:
+				draw_line(center + Vector2.from_angle(from_a) * c.z, center + Vector2.from_angle(to_a) * c.z, color, 2.0)
 			prev_ok = ok
-			prev = pt
+			prev_a = a
+
+
+func _outside_others(pt: Vector2, circles: Array, skip: int) -> bool:
+	for j in circles.size():
+		var o: Vector3 = circles[j]
+		if j != skip and pt.distance_squared_to(Vector2(o.x, o.y)) < o.z * o.z:
+			return false
+	return true
 
 
 func _draw_effects() -> void:

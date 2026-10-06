@@ -39,8 +39,6 @@ enum Affects { ALL, FACTION, MELEE }
 @export var buff_attack_speed_pct: int = 0
 @export var buff_move_pct: int = 0
 @export var buff_armor: int = 0
-## Full strength with no foreign card types on the board, half with one, none with more.
-@export var scales_with_purity: bool = false
 
 @export_group("Contract")
 ## Active only when the owner's board has at least min_factions and fewer than max_factions
