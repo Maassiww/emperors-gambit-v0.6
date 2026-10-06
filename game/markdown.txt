@@ -13,3 +13,7 @@ Uruchomienie konkretnej sceny: godot res://scenes/main.tscn
 Każdy skrypt powinien dziedziczyć po odpowiednim węźle (Node/CharacterBody2D/etc.).
 Używaj sygnałów (Signals) do komunikacji "w górę" i metod do komunikacji "w dół".
 Nie twórz gigantycznych skryptów, rozbijaj mechaniki na mniejsze komponenty (Nodes)
+
+Wyjątek: logika meczu (game/core/, game/ai/) to czyste klasy (RefCounted/Resource), bez węzłów i sygnałów.
+Musi być deterministyczna i działać bez sceny, bo tę samą logikę uruchomi serwer PvP.
+Zasady o węzłach i sygnałach dotyczą scen i interfejsu (game/scenes/, game/ui/).
