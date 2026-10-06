@@ -32,6 +32,8 @@ enum Affects { ALL, FACTION, MELEE }
 @export var stacks: int = 0
 @export var max_count: int = 0
 @export var summon: StringName
+## Slow (%) applied by this trait or by its zone.
+@export var slow_pct: int = 0
 
 @export_group("Aura")
 @export var affects: Affects = Affects.ALL

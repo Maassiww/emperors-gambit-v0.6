@@ -44,7 +44,10 @@ Przy limicie 1 speciala czysty deck to zawsze 4 zwykłe karty frakcji + 1 specia
   - **Łowca Nagród** (szybki range, ×2): trafienia oznaczają cel, +15% przy 1 frakcji, +30% i dłużej przy 2.
 - Bot: decki i presety pod limit 1 speciala.
 
-### 2. Fundament: Spowolnienie i Strefa
+### 2. Fundament: Spowolnienie i Strefa – ✅ zrobione 2026-10-06
+Spowolnienie (`Effect.SLOW`): sumuje się ze wszystkich źródeł do `slow_max_pct` = 50, dłuższy czas wygrywa.
+Strefa (`BattleSim.Zone`): co `zone_pulse_seconds` = 0,5 s obrażenia (`power`), Korozja (`stacks`) i Spowolnienie (`slow_pct`)
+wrogom na ziemi w promieniu; latający odporni; maks. `max_zones_per_side` = 6 (najstarsza znika). Na razie żadna karta ich nie używa.
 - **Spowolnienie**: −X% ruchu i szybkości ataku, sumuje się do maks. −50%.
 - **Strefa**: efekt na ziemi (pozycja, promień, czas, właściciel, efekt), maks. N stref na stronę.
 - UI: plamy stref w kolorze frakcji, łączone jak obrysy aur; napis + pasek czasu dla Spowolnienia.

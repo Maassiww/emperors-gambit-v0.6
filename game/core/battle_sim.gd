@@ -11,13 +11,27 @@ const RETARGET_TICKS := 10
 const TELEPORT_BEHIND := 25
 
 enum Outcome { ELIMINATION, HP, DAMAGE, COIN }
-enum Effect { STUN, STUN_IMMUNE, CORROSION, MARK }
+enum Effect { STUN, STUN_IMMUNE, CORROSION, MARK, SLOW }
 
 
 class StatusEffect:
 	var power: int
 	var until: int
 	var length: int
+
+
+## Ground effect: every zone_pulse_seconds hits enemy ground units inside with the spec's
+## power (damage), stacks (corrosion) and slow_pct (slow lasting until the next pulse and a bit).
+class Zone:
+	var owner: int
+	var x: int
+	var y: int
+	## Sim units (px * SCALE).
+	var radius: int
+	var until: int
+	var length: int
+	var spec: TraitData
+	var source: int
 
 
 class SimUnit:
@@ -96,6 +110,8 @@ var _factions: Array[int] = [0, 0]
 var _taunters: Array[SimUnit] = []
 var _pending_status: Array[Array] = []
 var _pending_spawn: Array[Array] = []
+var zones: Array[Zone] = []
+var _pending_zones: Array[Zone] = []
 
 
 func _init(armies: Array[Army], bases: Array[BaseData], cfg: GameConfig, rng: RandomNumberGenerator) -> void:
@@ -134,6 +150,8 @@ func step() -> void:
 	var hits: Array[Array] = []
 	_pending_status.clear()
 	_pending_spawn.clear()
+	_pending_zones.clear()
+	_pulse_zones(hits)
 	for u in units:
 		if u.alive:
 			_act(u, hits)
@@ -144,7 +162,9 @@ func step() -> void:
 	_apply_hits(hits)
 	_apply_statuses()
 	_spawn_pending()
+	_place_zones()
 	_expire_statuses()
+	_expire_zones()
 	_check_end()
 
 
@@ -174,6 +194,11 @@ func factions_on_board(owner: int) -> int:
 
 func has_status(u: SimUnit, effect: Effect) -> bool:
 	return u.statuses.has(effect) and tick < u.statuses[effect].until
+
+
+## Current slow in % (0..slow_max_pct).
+func slow_of(u: SimUnit) -> int:
+	return u.statuses[Effect.SLOW].power if has_status(u, Effect.SLOW) else 0
 
 
 func armor_of(u: SimUnit) -> int:
@@ -619,7 +644,7 @@ func _speed_pct(u: SimUnit) -> int:
 	var base := _bases[u.owner]
 	if base.ability == BaseData.Ability.WAR_DRUMS and ability_active(u.owner):
 		pct += base.ability_power
-	return pct
+	return pct * (100 - slow_of(u)) / 100
 
 
 func _effective_interval(u: SimUnit) -> int:
@@ -631,7 +656,7 @@ func _effective_interval(u: SimUnit) -> int:
 				bonus += base.ability_power / 2
 			BaseData.Ability.RALLY_BANNER:
 				bonus += base.ability_power
-	return maxi(1, u.interval * 100 / (100 + bonus))
+	return maxi(1, u.interval * 100 / (100 + bonus) * 100 / (100 - slow_of(u)))
 
 
 func _update_rally_banner() -> void:
@@ -722,6 +747,16 @@ func _add_status(u: SimUnit, effect: Effect, power: int, ticks: int) -> void:
 		Effect.MARK:
 			var cur: int = u.statuses[effect].power if has_status(u, effect) else 0
 			_set_status(u, effect, maxi(cur, power), ticks)
+		Effect.SLOW:
+			# Slows from every source add up to slow_max_pct; the longer duration wins.
+			if has_status(u, effect):
+				var s: StatusEffect = u.statuses[effect]
+				s.power = mini(_cfg.slow_max_pct, s.power + power)
+				if tick + ticks > s.until:
+					s.until = tick + ticks
+					s.length = ticks
+			else:
+				_set_status(u, effect, mini(_cfg.slow_max_pct, power), ticks)
 
 
 func _set_status(u: SimUnit, effect: Effect, power: int, ticks: int) -> void:
@@ -739,6 +774,65 @@ func _expire_statuses() -> void:
 		for effect in u.statuses.keys():
 			if tick >= u.statuses[effect].until:
 				u.statuses.erase(effect)
+
+
+# --- zones -------------------------------------------------------------------
+
+## Queues a zone at x, y (sim units); it appears after this tick's hits, like spawns.
+## source: uid of the unit that made it (may be dead by now); damage is credited to its owner.
+func _add_zone(owner: int, x: int, y: int, spec: TraitData, source: int) -> void:
+	var z := Zone.new()
+	z.owner = owner
+	z.x = x
+	z.y = y
+	z.radius = spec.radius * SCALE
+	z.length = _seconds_to_ticks(spec.duration)
+	z.spec = spec
+	z.source = source
+	_pending_zones.append(z)
+
+
+func _place_zones() -> void:
+	for z in _pending_zones:
+		z.until = tick + z.length
+		zones.append(z)
+		events.append({"type": "zone", "owner": z.owner, "x": z.x, "y": z.y, "r": z.spec.radius})
+		var own := zones.filter(func(o: Zone) -> bool: return o.owner == z.owner)
+		if own.size() > _cfg.max_zones_per_side:
+			zones.erase(own[0])
+
+
+func _expire_zones() -> void:
+	zones = zones.filter(func(z: Zone) -> bool: return tick < z.until)
+
+
+func _pulse_zones(hits: Array[Array]) -> void:
+	var period := maxi(1, _seconds_to_ticks(_cfg.zone_pulse_seconds))
+	for z in zones:
+		if (z.until - tick) % period != 0:
+			continue
+		for e in units:
+			if not e.alive or e.owner == z.owner or e.flying:
+				continue
+			var dx := e.x - z.x
+			var dy := e.y - z.y
+			if dx * dx + dy * dy > z.radius * z.radius:
+				continue
+			if z.spec.power > 0:
+				hits.append([z.source, e.uid, _zone_damage(z, e), true])
+			if z.spec.stacks > 0:
+				_pending_status.append([e.uid, Effect.CORROSION, z.spec.stacks, period * 3])
+			if z.spec.slow_pct > 0:
+				_pending_status.append([e.uid, Effect.SLOW, z.spec.slow_pct, period + 2])
+
+
+## Zone damage ignores the source's buffs (the source may be dead) but not armor or mark.
+func _zone_damage(z: Zone, e: SimUnit) -> int:
+	var dmg := z.spec.power * overtime_pct() / 100
+	dmg = dmg * UnitData.armor_pass_pct(armor_of(e), _cfg) / 100
+	if has_status(e, Effect.MARK):
+		dmg = dmg * (100 + e.statuses[Effect.MARK].power) / 100
+	return maxi(1, dmg)
 
 
 func _spawn_pending() -> void:

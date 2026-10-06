@@ -13,6 +13,7 @@ const STATUS_NAMES := {
 	BattleSim.Effect.STUN: "ogłuszenie",
 	BattleSim.Effect.CORROSION: "korozja",
 	BattleSim.Effect.MARK: "oznaczenie",
+	BattleSim.Effect.SLOW: "spowolnienie",
 }
 const CONTRACT_LEVELS := ["Kontrakt: brak", "Kontrakt I", "Kontrakt II"]
 
@@ -107,6 +108,7 @@ func _draw() -> void:
 	_draw_base(0, Rect2(0, height - BASE_H, width, BASE_H))
 	_draw_base(1, Rect2(0, 0, width, BASE_H))
 	if sim != null:
+		_draw_zones()
 		_draw_rings()
 		for u in sim.units:
 			if u.alive:
@@ -192,7 +194,9 @@ func _draw_unit_labels(u: BattleSim.SimUnit) -> void:
 		var text: String = STATUS_NAMES[effect]
 		if effect == BattleSim.Effect.CORROSION:
 			text += " ×%d" % st.power
-		draw_string(_font, Vector2(p.x - 40, y), text, HORIZONTAL_ALIGNMENT_CENTER, 80, 11, Color(1, 1, 1, 0.85))
+		elif effect == BattleSim.Effect.SLOW:
+			text += " %d%%" % st.power
+		draw_string(_font, Vector2(p.x - 60, y), text, HORIZONTAL_ALIGNMENT_CENTER, 120, 11, Color(1, 1, 1, 0.85))
 		var left := clampf((st.until - sim.tick - interp + 1.0) / maxf(1.0, st.length), 0.0, 1.0)
 		draw_rect(Rect2(p.x - 12, y + 2, 24 * left, 2), Color(1, 1, 1, 0.9))
 		y -= 15
@@ -204,6 +208,26 @@ func _draw_unit_labels(u: BattleSim.SimUnit) -> void:
 		note = CONTRACT_LEVELS[mini(sim.factions_on_board(u.owner), 2)]
 	if note != "":
 		draw_string(_font, Vector2(p.x - 60, p.y + s + 13), note, HORIZONTAL_ALIGNMENT_CENTER, 120, 11, Color(1, 0.9, 0.6, 0.85))
+
+
+## Ground zones: a faint fill per circle and one merged outline per side and faction.
+func _draw_zones() -> void:
+	var groups := {}
+	for z in sim.zones:
+		var faction := sim.units[z.source].data.faction
+		var key := "%d%s" % [z.owner, faction]
+		if not groups.has(key):
+			var c := GameDB.faction(faction).color.lightened(0.15)
+			groups[key] = {"color": c, "circles": []}
+		var fade := clampf((z.until - sim.tick) / 20.0, 0.0, 1.0)
+		var pos := Vector2(z.x, z.y) / BattleSim.SCALE
+		var r := float(z.radius) / BattleSim.SCALE
+		var c: Color = groups[key].color
+		draw_circle(pos, r, Color(c.r, c.g, c.b, 0.13 * fade))
+		groups[key].circles.append(Vector3(pos.x, pos.y, r))
+	for key in groups:
+		var c: Color = groups[key].color
+		_draw_union_outline(groups[key].circles, Color(c.r, c.g, c.b, 0.5))
 
 
 ## Taunt and aura ranges. Rings of the same effect and side merge into one outline:

@@ -42,6 +42,11 @@ enum DrawMode { ALWAYS_WINNER, DRAW_SUDDEN_DEATH }
 @export var corrosion_max_stacks: int = 3
 ## After a stun ends the unit cannot be stunned again for this long (no stun chains).
 @export var stun_immunity_seconds: float = 2.0
+## Slow: -% movement and attack speed; stacks from all sources up to this.
+@export var slow_max_pct: int = 50
+## Ground zones: effects pulse this often; each side keeps at most max_zones_per_side (oldest go first).
+@export var zone_pulse_seconds: float = 0.5
+@export var max_zones_per_side: int = 6
 ## Healing received by units with Taunt (stops taunt + heal walls).
 @export var taunt_heal_pct: int = 50
 ## After this, overtime: all damage grows every second so the battle always ends.
