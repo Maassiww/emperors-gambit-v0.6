@@ -220,7 +220,7 @@ func _refresh_cards() -> void:
 		info[0].visible = o.tier > 0
 		info[1].text = o.label()
 		info[2].text = "%s · masz: %d" % [UnitData.ROLE_NAMES[u.role], army.count(o.unit_id)]
-		info[3].text = GameDB.unit(o.produces).tags
+		(b.get_meta("chips") as TagChips).set_tags(GameDB.unit(o.produces).tags)
 		var style := StyleBoxFlat.new()
 		style.bg_color = GameDB.faction(u.faction).color.darkened(0.55)
 		style.border_color = TIER_COLORS[o.tier]
@@ -361,7 +361,11 @@ func _build_bottom_panel() -> void:
 		b.pressed.connect(_on_pick.bind(i))
 		cards.add_child(b)
 		_cards.append(b)
-		b.set_meta("labels", card_labels(b, [[13, Color(1.0, 0.85, 0.4)], [18, Color.WHITE], [12, Color(1, 1, 1, 0.6)], [12, Color(1, 1, 1, 0.85)]]))
+		var labels := card_labels(b, [[13, Color(1.0, 0.85, 0.4)], [18, Color.WHITE], [12, Color(1, 1, 1, 0.6)]])
+		b.set_meta("labels", labels)
+		var chips := TagChips.new()
+		labels[0].get_parent().add_child(chips)
+		b.set_meta("chips", chips)
 
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 10)

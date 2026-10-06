@@ -326,3 +326,11 @@ func test_specials_battle_is_deterministic() -> void:
 	var r1 := _sim(a, b).run()
 	var r2 := _sim(a, b).run()
 	assert_eq([r1.ticks, r1.winner, r1.hp_left, r1.damage_dealt], [r2.ticks, r2.winner, r2.hp_left, r2.damage_dealt])
+
+
+func test_every_card_has_texts_and_known_tags() -> void:
+	for id in GameDB.units:
+		var u := GameDB.unit(id)
+		assert_true(u.blurb != "" and u.tags != "", "%s: missing texts" % id)
+		for tag in u.tags.split(" · ", false):
+			assert_true(TagChips.CATEGORY_OF.has(tag), "%s: tag without category: %s" % [id, tag])
